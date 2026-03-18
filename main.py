@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from agents.ceo.agent import CEOAgent
 from assembly_lines.content_line import run_content_line
+from assembly_lines.sales_line import run_sales_line
+from board.director import run_board
 from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
@@ -69,6 +71,17 @@ class ContentLineRequest(BaseModel):
     topic: str
     business: str
     audience: str
+
+
+class SalesLineRequest(BaseModel):
+    lead_name: str
+    business_type: str
+    pain_points: list[str]
+
+
+class BoardRequest(BaseModel):
+    request: str
+    context: dict = {}
 
 
 @app.get('/health')
@@ -272,4 +285,16 @@ async def get_performance():
 @app.post('/assembly/content')
 async def content_assembly_line(req: ContentLineRequest):
     result = await run_content_line(req.topic, req.business, req.audience)
+    return result
+
+
+@app.post('/assembly/sales')
+async def sales_assembly_line(req: SalesLineRequest):
+    result = await run_sales_line(req.lead_name, req.business_type, req.pain_points)
+    return result
+
+
+@app.post('/board/decide')
+async def board_decide(req: BoardRequest):
+    result = await run_board(req.request, req.context)
     return result
