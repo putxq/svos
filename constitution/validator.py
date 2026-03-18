@@ -5,19 +5,23 @@ class ConstitutionValidator:
     """Validates decisions against business constitution constraints."""
 
     def validate(self, payload: DecisionRequest) -> DecisionResponse:
-        reasons: list[str] = []
+        reject_reasons: list[str] = []
+        notes: list[str] = []
 
         action_l = payload.action.lower()
-        constraints_l = [c.lower() for c in payload.business.constraints]
+        constraints_l = [c.lower().strip() for c in payload.business.constraints]
 
+        # Reject only for meaningful, explicit constraint matches.
         for rule in constraints_l:
-            if rule and rule in action_l:
-                reasons.append(f"Action conflicts with business constraint: {rule}")
+            if rule and len(rule) > 3 and rule in action_l:
+                reject_reasons.append(f"Action conflicts with business constraint: {rule}")
 
+        # Missing goals is warning/note, not a hard rejection.
         if not payload.business.goals:
-            reasons.append('Business goals are empty; cannot align decision')
+            notes.append('Warning: business goals are empty')
 
-        if reasons:
-            return DecisionResponse(status='rejected', reasons=reasons)
+        if reject_reasons:
+            return DecisionResponse(status='rejected', reasons=reject_reasons)
 
-        return DecisionResponse(status='approved', reasons=['Complies with constitution'])
+        reasons = ['Complies with constitution'] + notes
+        return DecisionResponse(status='approved', reasons=reasons)
