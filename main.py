@@ -10,6 +10,13 @@ from agents.ceo.agent import CEOAgent
 from assembly_lines.content_line import run_content_line
 from assembly_lines.sales_line import run_sales_line
 from board.director import run_board
+from c_suite.coo_agent import coo_decide
+from c_suite.cto_agent import cto_decide
+from c_suite.clo_agent import clo_decide
+from c_suite.chro_agent import chro_evaluate
+from factories.content_factory import produce_content_batch
+from factories.data_factory import analyze_business_data
+from factories.strategy_factory import build_strategy
 from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
@@ -82,6 +89,42 @@ class SalesLineRequest(BaseModel):
 class BoardRequest(BaseModel):
     request: str
     context: dict = {}
+
+
+class COORequest(BaseModel):
+    business_context: str
+    current_operations: str
+    bottlenecks: list[str]
+
+
+class CTORequest(BaseModel):
+    business_context: str
+    current_tech: str
+    tech_goals: list[str]
+
+
+class CLORequest(BaseModel):
+    business_context: str
+    country: str = "Saudi Arabia"
+    business_type: str
+
+
+class ContentFactoryRequest(BaseModel):
+    topic: str
+    business: str
+    platforms: list[str] = ["linkedin", "twitter", "blog"]
+
+
+class DataFactoryRequest(BaseModel):
+    business: str
+    data_description: str
+    analysis_goal: str
+
+
+class StrategyFactoryRequest(BaseModel):
+    business: str
+    goals: list[str]
+    timeframe: str = "90 يوم"
 
 
 @app.get('/health')
@@ -298,3 +341,87 @@ async def sales_assembly_line(req: SalesLineRequest):
 async def board_decide(req: BoardRequest):
     result = await run_board(req.request, req.context)
     return result
+
+
+@app.post('/csuite/coo')
+async def run_coo(req: COORequest):
+    return await coo_decide(
+        req.business_context,
+        req.current_operations,
+        req.bottlenecks,
+    )
+
+
+@app.post('/csuite/cto')
+async def run_cto(req: CTORequest):
+    return await cto_decide(
+        req.business_context,
+        req.current_tech,
+        req.tech_goals,
+    )
+
+
+@app.post('/csuite/clo')
+async def run_clo(req: CLORequest):
+    return await clo_decide(
+        req.business_context,
+        req.country,
+        req.business_type,
+    )
+
+
+@app.post('/csuite/chro')
+async def run_chro():
+    return await chro_evaluate(monitor)
+
+
+@app.post('/csuite/run_all')
+async def run_csuite_all(req: dict):
+    coo_task = coo_decide(
+        req.get('business_context', ''),
+        req.get('current_operations', ''),
+        req.get('bottlenecks', []),
+    )
+    cto_task = cto_decide(
+        req.get('business_context', ''),
+        req.get('current_tech', ''),
+        req.get('tech_goals', []),
+    )
+    clo_task = clo_decide(
+        req.get('business_context', ''),
+        req.get('country', 'Saudi Arabia'),
+        req.get('business_type', ''),
+    )
+    chro_task = chro_evaluate(monitor)
+
+    coo_r, cto_r, clo_r, chro_r = await asyncio.gather(
+        coo_task, cto_task, clo_task, chro_task
+    )
+
+    return {
+        'csuite_activated': True,
+        'coo': coo_r,
+        'cto': cto_r,
+        'clo': clo_r,
+        'chro': chro_r,
+        'total_agents': 4,
+    }
+
+
+@app.post('/factories/content')
+async def content_factory(req: ContentFactoryRequest):
+    return await produce_content_batch(req.topic, req.business, req.platforms)
+
+
+@app.post('/factories/data')
+async def data_factory(req: DataFactoryRequest):
+    return await analyze_business_data(
+        req.business,
+        req.data_description,
+        req.analysis_goal,
+    )
+
+
+@app.post('/factories/strategy')
+async def strategy_factory(req: StrategyFactoryRequest):
+    return await build_strategy(req.business, req.goals, req.timeframe)
