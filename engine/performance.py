@@ -20,7 +20,7 @@ class PerformanceMonitor:
         # حساب الـ score
         success_rate = s["successes"] / s["tasks"]
         avg_quality = s["quality_sum"] / s["tasks"]
-        s["score"] = (success_rate * 60 + avg_quality * 40) * 100
+        s["score"] = round(success_rate * 60 + avg_quality * 40, 2)
 
         return s["score"]
 

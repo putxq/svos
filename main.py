@@ -3,9 +3,11 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from agents.ceo.agent import CEOAgent
+from assembly_lines.content_line import run_content_line
 from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
@@ -61,6 +63,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class ContentLineRequest(BaseModel):
+    topic: str
+    business: str
+    audience: str
 
 
 @app.get('/health')
@@ -259,3 +267,9 @@ async def get_performance():
             aid for aid in monitor.scores if monitor.should_terminate(aid)
         ],
     }
+
+
+@app.post('/assembly/content')
+async def content_assembly_line(req: ContentLineRequest):
+    result = await run_content_line(req.topic, req.business, req.audience)
+    return result
