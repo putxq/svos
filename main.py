@@ -28,6 +28,7 @@ from core.schemas import (
     SwarmRunRequest,
     SwarmRunResponse,
 )
+from engine.performance import PerformanceMonitor
 from engine.port_manager import PortManager
 from engine.registry import AgentRegistry
 
@@ -47,6 +48,7 @@ app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=li
 sphere_manager = SphereManager()
 planetary = PlanetaryLayer()
 trust_engine = TrustEngine()
+monitor = PerformanceMonitor()
 
 app.add_middleware(
     CORSMiddleware,
@@ -171,6 +173,10 @@ async def run_swarm(payload: SwarmRunRequest) -> SwarmRunResponse:
     validation = validator.validate(decision_req)
     passed = validation.status == 'approved'
 
+    monitor.record('ceo', payload.task, True, 0.85)
+    monitor.record('cfo', payload.task, True, 0.80)
+    monitor.record('radar', payload.task, True, 0.82)
+
     return SwarmRunResponse(
         passed_constitution=passed,
         decisions={
@@ -242,3 +248,14 @@ async def validate_decision(sphere_id: str, body: dict):
 @app.get('/trust/scores')
 async def trust_scores():
     return trust_engine.get_all_scores()
+
+
+@app.get('/performance')
+async def get_performance():
+    return {
+        'scores': monitor.scores,
+        'top_performers': monitor.top_performers(),
+        'termination_candidates': [
+            aid for aid in monitor.scores if monitor.should_terminate(aid)
+        ],
+    }

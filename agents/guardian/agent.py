@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from anthropic import AsyncAnthropic
 
 from core.config import settings
@@ -10,6 +12,22 @@ class GuardianAgent:
         if not settings.anthropic_api_key:
             raise RuntimeError('ANTHROPIC_API_KEY is not configured')
         self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.memory = []  # قصيرة المدى
+
+    def remember(self, key, value):
+        self.memory.append(
+            {
+                "key": key,
+                "value": value,
+                "ts": datetime.utcnow().isoformat(),
+            }
+        )
+
+    def recall(self, key):
+        for m in reversed(self.memory):
+            if m["key"] == key:
+                return m["value"]
+        return None
 
     async def review(self, ceo_decision: str, cfo_decision: str, radar_decision: str) -> str:
         prompt = (
