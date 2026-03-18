@@ -9,6 +9,9 @@ from agents.ceo.agent import CEOAgent
 from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
+from aurora_x.planetary_layer import PlanetaryLayer
+from aurora_x.sphere_manager import SphereManager
+from aurora_x.trust_engine import TrustEngine
 from constitution.validator import ConstitutionValidator
 from core.security import verify_api_key
 from core.config import settings
@@ -20,6 +23,8 @@ from core.schemas import (
     DecisionResponse,
     RegisterAgentRequest,
     RegisterAgentResponse,
+    SphereCreateRequest,
+    SphereResponse,
     SwarmRunRequest,
     SwarmRunResponse,
 )
@@ -39,6 +44,10 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+sphere_manager = SphereManager()
+planetary = PlanetaryLayer()
+trust_engine = TrustEngine()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -171,3 +180,65 @@ async def run_swarm(payload: SwarmRunRequest) -> SwarmRunResponse:
             'guardian': guardian_review,
         },
     )
+
+
+@app.post('/spheres/create')
+async def create_sphere(req: SphereCreateRequest):
+    sphere = sphere_manager.create_sphere(req.owner, req.business_type)
+    result = sphere.initialize(
+        req.mission,
+        req.values,
+        req.constraints,
+        req.goals,
+    )
+
+    global_check = planetary.validate_globally(req.mission)
+
+    return {
+        'sphere': result,
+        'planetary_approval': global_check,
+        'status': 'active',
+    }
+
+
+@app.get('/spheres')
+async def list_spheres():
+    return {
+        'spheres': sphere_manager.list_spheres(),
+        'total': len(sphere_manager.spheres),
+    }
+
+
+@app.get('/spheres/{sphere_id}')
+async def get_sphere(sphere_id: str):
+    sphere = sphere_manager.get_sphere(sphere_id)
+    if not sphere:
+        raise HTTPException(404, 'Sphere not found')
+    return sphere.get_status()
+
+
+@app.post('/spheres/{sphere_id}/validate')
+async def validate_decision(sphere_id: str, body: dict):
+    sphere = sphere_manager.get_sphere(sphere_id)
+    if not sphere:
+        raise HTTPException(404, 'Sphere not found')
+
+    decision = body.get('decision', '')
+    agent = body.get('agent', 'unknown')
+
+    sphere_result = sphere.validate(decision, agent)
+    global_result = planetary.validate_globally(decision)
+
+    final_approved = sphere_result['approved'] and global_result['globally_approved']
+
+    return {
+        'approved': final_approved,
+        'sphere_validation': sphere_result,
+        'planetary_validation': global_result,
+        'sphere_id': sphere_id,
+    }
+
+
+@app.get('/trust/scores')
+async def trust_scores():
+    return trust_engine.get_all_scores()

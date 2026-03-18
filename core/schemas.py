@@ -62,3 +62,20 @@ class DecisionRequest(BaseModel):
 class DecisionResponse(BaseModel):
     status: Literal['approved', 'rejected']
     reasons: list[str] = Field(default_factory=list)
+
+
+class SphereCreateRequest(BaseModel):
+    owner: str
+    business_type: str
+    mission: str
+    values: list[str]
+    constraints: list[str]
+    goals: list[str]
+    risk_tolerance: str = "medium"
+
+
+class SphereResponse(BaseModel):
+    sphere_id: str
+    owner: str
+    status: str
+    constitution: dict
