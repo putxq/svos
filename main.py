@@ -20,6 +20,7 @@ from factories.strategy_factory import build_strategy
 from supply_chain.procurement_agent import run_procurement
 from supply_chain.logistics_agent import run_logistics
 from supply_chain.inventory_agent import run_inventory
+from supply_chain.supply_agent import analyze_supply_chain
 from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
@@ -147,6 +148,12 @@ class InventoryRequest(BaseModel):
     business: str
     products: list[str]
     current_stock: str
+
+
+class SupplyChainRequest(BaseModel):
+    business: str
+    products: list[str]
+    current_suppliers: list[str] = []
 
 
 @app.get('/health')
@@ -470,4 +477,13 @@ async def inventory(req: InventoryRequest):
         req.business,
         req.products,
         req.current_stock,
+    )
+
+
+@app.post('/supply_chain/analyze')
+async def supply_chain_analyze(req: SupplyChainRequest):
+    return await analyze_supply_chain(
+        req.business,
+        req.products,
+        req.current_suppliers,
     )
