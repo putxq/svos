@@ -17,6 +17,9 @@ from c_suite.chro_agent import chro_evaluate
 from factories.content_factory import produce_content_batch
 from factories.data_factory import analyze_business_data
 from factories.strategy_factory import build_strategy
+from supply_chain.procurement_agent import run_procurement
+from supply_chain.logistics_agent import run_logistics
+from supply_chain.inventory_agent import run_inventory
 from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
@@ -125,6 +128,25 @@ class StrategyFactoryRequest(BaseModel):
     business: str
     goals: list[str]
     timeframe: str = "90 يوم"
+
+
+class ProcurementRequest(BaseModel):
+    business: str
+    needed_items: list[str]
+    budget: str
+
+
+class LogisticsRequest(BaseModel):
+    business: str
+    origin: str
+    destination: str
+    cargo_type: str
+
+
+class InventoryRequest(BaseModel):
+    business: str
+    products: list[str]
+    current_stock: str
 
 
 @app.get('/health')
@@ -425,3 +447,27 @@ async def data_factory(req: DataFactoryRequest):
 @app.post('/factories/strategy')
 async def strategy_factory(req: StrategyFactoryRequest):
     return await build_strategy(req.business, req.goals, req.timeframe)
+
+
+@app.post('/supply_chain/procurement')
+async def procurement(req: ProcurementRequest):
+    return await run_procurement(req.business, req.needed_items, req.budget)
+
+
+@app.post('/supply_chain/logistics')
+async def logistics(req: LogisticsRequest):
+    return await run_logistics(
+        req.business,
+        req.origin,
+        req.destination,
+        req.cargo_type,
+    )
+
+
+@app.post('/supply_chain/inventory')
+async def inventory(req: InventoryRequest):
+    return await run_inventory(
+        req.business,
+        req.products,
+        req.current_stock,
+    )

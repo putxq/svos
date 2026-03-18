@@ -45,9 +45,10 @@ async def produce_content_batch(
   )
   return {"platform": platform, "content": content}
 
- results = await asyncio.gather(
- *[make_post(p) for p in platforms]
- )
+ results = []
+ for p in platforms:
+  r = await make_post(p)
+  results.append(r)
 
  return {
  "topic": topic,
