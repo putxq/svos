@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from agents.ceo.agent import CEOAgent
@@ -10,6 +10,7 @@ from agents.cfo.agent import CFOAgent
 from agents.radar.agent import RadarAgent
 from agents.guardian.agent import GuardianAgent
 from constitution.validator import ConstitutionValidator
+from core.security import verify_api_key
 from core.config import settings
 from core.schemas import (
     AgentTaskRequest,
@@ -79,7 +80,7 @@ async def register_agent(payload: RegisterAgentRequest) -> RegisterAgentResponse
     return RegisterAgentResponse(agent_id=agent_id, port=port, status='registered')
 
 
-@app.post('/agents/{agent_id}/task', response_model=AgentTaskResponse)
+@app.post('/agents/{agent_id}/task', response_model=AgentTaskResponse, dependencies=[Depends(verify_api_key)])
 async def run_agent_task(agent_id: str, payload: AgentTaskRequest) -> AgentTaskResponse:
     agent = await registry.get_agent(agent_id)
     if not agent:
@@ -123,7 +124,7 @@ async def run_agent_task(agent_id: str, payload: AgentTaskRequest) -> AgentTaskR
     return AgentTaskResponse(decision=decision, passed_constitution=passed, agent_id=agent_id)
 
 
-@app.post('/swarm/run', response_model=SwarmRunResponse)
+@app.post('/swarm/run', response_model=SwarmRunResponse, dependencies=[Depends(verify_api_key)])
 async def run_swarm(payload: SwarmRunRequest) -> SwarmRunResponse:
     try:
         ceo = CEOAgent()

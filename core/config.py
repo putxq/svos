@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LLM_PROVIDER = "ollama" # أو "claude"
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
     max_port: int = 20000
 
     anthropic_api_key: str | None = None
+    api_key: str = Field(default="", validation_alias="SVOS_API_KEY")
 
 
 settings = Settings()
