@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from core.llm_provider import LLMProvider
 from core.logger import log_decision
 from memory.memory_manager import MemoryManager
+from tools import create_default_registry
 
 
 class ThinkResult(BaseModel):
@@ -65,6 +66,9 @@ class BaseAgent:
         self.llm = llm_provider or LLMProvider()
         self.memory = memory_manager or MemoryManager()
         self.sub_agents: dict[str, dict[str, Any]] = {}
+
+        self.tool_registry = create_default_registry()
+        self.my_tools = self.tool_registry.get_tools_for_agent(self.name)
 
     # === التفكير ===
     async def think(self, task: str, context: dict) -> ThinkResult:
@@ -179,10 +183,24 @@ class BaseAgent:
             return res
 
     # === الأدوات ===
-    async def use_tool(self, tool_name: str, params: dict) -> Any:
-        # MCP-ready placeholder
-        await self.remember("tool_call", {"tool": tool_name, "params": params}, "episodic")
-        return {"tool": tool_name, "params": params, "result": "not_implemented"}
+    async def use_tool(self, tool_name: str, params: dict) -> dict:
+        tool = self.tool_registry.get(tool_name)
+        if not tool:
+            return {"error": f"Tool {tool_name} not found"}
+
+        if tool not in self.my_tools:
+            return {"error": f"Agent {self.name} not authorized for {tool_name}"}
+
+        try:
+            result = await tool.execute(**params)
+            await self.remember(
+                key=f"tool_use_{tool_name}",
+                value={"params": params, "result_summary": str(result)[:200]},
+                memory_type="episodic",
+            )
+            return result
+        except Exception as e:
+            return {"error": str(e)}
 
     # === النقاش ===
     async def discuss(self, topic: str, participants: list[str]) -> DiscussionResult:
