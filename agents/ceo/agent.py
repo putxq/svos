@@ -5,12 +5,7 @@ from agents.ceo.tools import format_goals, search_market
 
 class CEOAgent(BaseAgent):
     def __init__(self):
-        super().__init__(
-            agent_id="ceo",
-            role="CEO",
-            system_prompt=SYSTEM_PROMPT,
-            tools={"search_market": search_market},
-        )
+        super().__init__(name="CEO", role="CEO", department="executive")
 
     async def decide(self, business_context: str, goals: list[str], task: str) -> str:
         self.remember("last_context", business_context)

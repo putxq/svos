@@ -5,7 +5,7 @@ from agents.cfo.tools import format_goals
 
 class CFOAgent(BaseAgent):
     def __init__(self):
-        super().__init__(agent_id="cfo", role="CFO", system_prompt=SYSTEM_PROMPT)
+        super().__init__(name="CFO", role="CFO", department="finance")
 
     async def decide(self, business_context: str, goals: list[str], task: str) -> str:
         prompt = (

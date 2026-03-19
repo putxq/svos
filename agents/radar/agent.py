@@ -5,7 +5,7 @@ from agents.radar.tools import format_goals
 
 class RadarAgent(BaseAgent):
     def __init__(self):
-        super().__init__(agent_id="radar", role="Radar", system_prompt=SYSTEM_PROMPT)
+        super().__init__(name="Radar", role="Radar", department="intelligence")
 
     async def decide(self, business_context: str, goals: list[str], task: str) -> str:
         prompt = (

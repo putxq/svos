@@ -5,7 +5,7 @@ from agents.guardian.tools import compact
 
 class GuardianAgent(BaseAgent):
     def __init__(self):
-        super().__init__(agent_id="guardian", role="Guardian", system_prompt=SYSTEM_PROMPT)
+        super().__init__(name="Guardian", role="Guardian", department="governance")
 
     async def review(self, ceo_decision: str, cfo_decision: str, radar_decision: str) -> str:
         prompt = (
