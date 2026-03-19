@@ -1,0 +1,30 @@
+{
+  "profile": {
+    "company_name": "???? ??? ???????",
+    "description": "???? ????? ???? ??????? ?? ????????",
+    "goal": "زيادة المبيعات والعملاء",
+    "risk_appetite": "moderate",
+    "budget": "$5,000",
+    "lang": "ar"
+  },
+  "decision": "Launch first pilot for ???? ??? ???????",
+  "verdict": {
+    "approved": false,
+    "confidence": 0.15,
+    "reasoning": "Decision cannot be evaluated due to critical missing information. The pilot project name is redacted/corrupted (????), making it impossible to assess alignment with mission, values, and constraints. The business profile mission is also corrupted. The source 'wizard' is non-standard and lacks proper documentation trail. Without clarity on what is being launched, financial impact assessment, risk analysis, and constitutional compliance cannot be determined.",
+    "conditions": [
+      "Provide complete, unredacted pilot project name and description",
+      "Clarify business mission statement (currently corrupted)",
+      "Document decision source with proper governance trail (replace 'wizard' reference)",
+      "Provide detailed budget breakdown against $5,000 constraint",
+      "Submit risk assessment aligned with 'moderate' risk appetite",
+      "Confirm alignment with stated values: quality, transparency, growth"
+    ],
+    "alternatives": [
+      "Defer decision pending information completeness",
+      "Request formal proposal submission through standard governance channels",
+      "Escalate to founder for override decision if time-critical (confidence score 0.15 < 0.2 threshold)"
+    ]
+  },
+  "created_at": "2026-03-19T20:16:32.281803"
+}
