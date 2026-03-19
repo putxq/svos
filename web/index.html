@@ -1,0 +1,125 @@
+﻿<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVOS Wizard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--p:#534AB7;--s:#1D9E75;--bg:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb}
+    *{box-sizing:border-box} body{margin:0;font-family:Tajawal,system-ui;background:#f8fafc;color:var(--text)}
+    .wrap{max-width:900px;margin:24px auto;padding:0 16px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.04)}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.title{font-size:26px;font-weight:700;color:var(--p)}
+    .sub{color:var(--muted)} .lang button{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .progress{height:10px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:14px 0}.bar{height:100%;background:linear-gradient(90deg,var(--p),var(--s));width:20%;transition:.3s}
+    .step{display:none}.step.active{display:block} label{display:block;font-weight:600;margin-bottom:8px} input,textarea,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit}
+    .actions{display:flex;justify-content:space-between;margin-top:16px;gap:10px}.btn{border:none;background:var(--p);color:#fff;padding:10px 16px;border-radius:12px;cursor:pointer}
+    .btn.sec{background:#fff;color:#111;border:1px solid var(--line)} .btn.green{background:var(--s)} .result{display:none;margin-top:16px}
+    .pill{display:inline-block;background:#f3f4f6;padding:6px 10px;border-radius:999px;margin-inline-end:8px}
+    .chat{display:none;margin-top:16px}.chat-box{height:260px;overflow:auto;background:#fafafa;border:1px solid var(--line);border-radius:12px;padding:12px}
+    .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin:8px 0;white-space:pre-wrap}.me{margin-left:auto;background:#DCF8C6}.bot{background:#eee}
+    .chat-row{display:flex;gap:8px;margin-top:8px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="top">
+      <div>
+        <div class="title" id="title">SVOS - نظام تشغيل الأعمال السيادي</div>
+        <div class="sub" id="subtitle">أنشئ شركتك الرقمية في دقائق</div>
+      </div>
+      <div class="lang"><button id="toggleLang">English</button></div>
+    </div>
+    <div class="progress"><div id="bar" class="bar"></div></div>
+
+    <div class="step active" data-step="1"><label id="l1"></label><input id="company" /></div>
+    <div class="step" data-step="2"><label id="l2"></label><textarea id="desc" rows="3"></textarea></div>
+    <div class="step" data-step="3"><label id="l3"></label><select id="goal"></select></div>
+    <div class="step" data-step="4"><label id="l4"></label><select id="risk"></select></div>
+    <div class="step" data-step="5"><label id="l5"></label><select id="budget"><option>$1,000</option><option selected>$5,000</option><option>$10,000+</option></select></div>
+
+    <div class="actions">
+      <button class="btn sec" id="prev">السابق</button>
+      <button class="btn" id="next">التالي</button>
+      <button class="btn green" id="create" style="display:none">أنشئ شركتي</button>
+    </div>
+
+    <div class="result" id="result">
+      <h3 id="rTitle">النتيجة</h3>
+      <div><span class="pill" id="confidence"></span><span class="pill" id="verdict"></span></div>
+      <pre id="plan" style="white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);padding:12px;border-radius:12px"></pre>
+    </div>
+
+    <div class="chat" id="chat">
+      <h3 id="chatTitle">محادثة الفريق التنفيذي</h3>
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-row"><input id="chatInput" /><button class="btn green" id="send">إرسال</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:8000';
+let step=1, lang='ar';
+const T={
+ ar:{dir:'rtl',toggle:'English',title:'SVOS - نظام تشغيل الأعمال السيادي',subtitle:'أنشئ شركتك الرقمية في دقائق',
+ l1:'اسم الشركة',l2:'وصف النشاط',l3:'الهدف الرئيسي',l4:'مستوى المخاطرة',l5:'الميزانية الشهرية',prev:'السابق',next:'التالي',create:'أنشئ شركتي',
+ goals:['زيادة المبيعات والعملاء','تقليل التكاليف وتحسين الكفاءة','إطلاق منتج/خدمة جديدة','التوسع في سوق جديد'],
+ risks:['محافظ','متوسط','جريء'],res:'النتيجة',chat:'محادثة الفريق التنفيذي',send:'إرسال',ask:'اكتب رسالتك...'},
+ en:{dir:'ltr',toggle:'العربية',title:'SVOS - Sovereign Business OS',subtitle:'Build your digital company in minutes',
+ l1:'Company name',l2:'Business description',l3:'Primary goal',l4:'Risk level',l5:'Monthly budget',prev:'Back',next:'Next',create:'Create Company',
+ goals:['Increase sales and clients','Reduce costs and improve efficiency','Launch new product/service','Expand into a new market'],
+ risks:['Conservative','Moderate','Aggressive'],res:'Result',chat:'Executive Team Chat',send:'Send',ask:'Type your message...'}
+}
+function applyLang(){const t=T[lang];document.documentElement.lang=lang;document.documentElement.dir=t.dir;
+['l1','l2','l3','l4','l5'].forEach(k=>document.getElementById(k).textContent=t[k]);
+document.getElementById('title').textContent=t.title;document.getElementById('subtitle').textContent=t.subtitle;
+document.getElementById('toggleLang').textContent=t.toggle;document.getElementById('prev').textContent=t.prev;document.getElementById('next').textContent=t.next;
+document.getElementById('create').textContent=t.create;document.getElementById('rTitle').textContent=t.res;document.getElementById('chatTitle').textContent=t.chat;document.getElementById('send').textContent=t.send;
+const goal=document.getElementById('goal');goal.innerHTML=t.goals.map(x=>`<option>${x}</option>`).join('');
+const risk=document.getElementById('risk');risk.innerHTML=t.risks.map(x=>`<option>${x}</option>`).join('');
+document.getElementById('chatInput').placeholder=t.ask;}
+
+function showStep(){document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+document.getElementById('bar').style.width=(step*20)+'%';document.getElementById('create').style.display=step===5?'inline-block':'none';document.getElementById('next').style.display=step===5?'none':'inline-block';}
+
+document.getElementById('toggleLang').onclick=()=>{lang=lang==='ar'?'en':'ar';applyLang();};
+document.getElementById('prev').onclick=()=>{if(step>1){step--;showStep();}};
+document.getElementById('next').onclick=()=>{if(step<5){step++;showStep();}};
+
+document.getElementById('create').onclick=async()=>{
+ const body={company_name:company.value||'My Company',description:desc.value||'Digital services',goal:goal.value,risk:risk.value,budget:budget.value};
+ let data;
+ try{let r=await fetch(API+'/wizard/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); if(r.ok){data=await r.json();}
+ else { // fallback
+   const rr=await fetch(API+'/board/decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request:`Create growth plan for ${body.company_name}`,context:{business_type:body.description,topic:body.goal,pain_points:[body.goal],budget:body.budget}})});
+   const b=await rr.json(); data={plan:b?.board_decision?.recommendation||JSON.stringify(b),confidence:b?.board_decision?.confidence||0,constitution_verdict:b?.board_decision?.aurora_approval?.approved?'approved':'rejected'};
+ }}catch(e){alert('API error: '+e.message);return}
+ result.style.display='block'; chat.style.display='block';
+ confidence.textContent='Confidence: '+Math.round((data.confidence||0)*100)+'%';
+ verdict.textContent='Constitution: '+(data.constitution_verdict||'-');
+ plan.textContent=data.plan||'-';
+ addMsg('bot','SVOS','جاهز، ابدأ المحادثة مع الفريق التنفيذي.');
+};
+
+function addMsg(side,who,text){const d=document.createElement('div');d.className='msg '+(side==='me'?'me':'bot');d.textContent=(side==='bot'?`[${who}] `:'')+text;chatBox.appendChild(d);chatBox.scrollTop=chatBox.scrollHeight;}
+
+document.getElementById('send').onclick=async()=>{
+ const text=chatInput.value.trim(); if(!text) return; addMsg('me','YOU',text); chatInput.value='';
+ const payload={message:text,company_name:company.value||'SVOS',description:desc.value||'',goal:goal.value||'',risk:risk.value||'moderate',agent_id:'ceo'};
+ try{let r=await fetch(API+'/wizard/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); let d;
+ if(r.ok){d=await r.json(); addMsg('bot',d.agent||'CEO',d.reply||'...');}
+ else { // fallback existing endpoint
+   const rr=await fetch(API+'/agents/ceo/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_context:desc.value||'',goals:[goal.value||''],task:text})});
+   d=await rr.json(); addMsg('bot','CEO',d.decision||JSON.stringify(d));
+ }
+ }catch(e){addMsg('bot','System','Error: '+e.message)}
+}
+
+applyLang(); showStep();
+</script>
+</body>
+</html>

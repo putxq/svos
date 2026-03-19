@@ -1,3 +1,4 @@
+from pathlib import Path
 import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -5,6 +6,8 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from agents.ceo.agent import CEOAgent
 from assembly_lines.content_line import run_content_line
@@ -30,6 +33,7 @@ from aurora_x.trust_engine import TrustEngine
 from constitution.validator import ConstitutionValidator
 from core.security import verify_api_key
 from core.config import settings
+from core.llm_provider import LLMProvider
 from core.schemas import (
     AgentTaskRequest,
     AgentTaskResponse,
@@ -487,3 +491,72 @@ async def supply_chain_analyze(req: SupplyChainRequest):
         req.products,
         req.current_suppliers,
     )
+
+
+class WizardCreateRequest(BaseModel):
+    company_name: str
+    description: str
+    goal: str
+    risk: str
+    budget: str
+
+
+class WizardChatRequest(BaseModel):
+    message: str
+    company_name: str = "SVOS Company"
+    description: str = "Digital business"
+    goal: str = "Growth"
+    risk: str = "moderate"
+    agent_id: str = "ceo"
+
+
+llm_for_wizard = LLMProvider()
+
+
+@app.post('/wizard/create')
+async def wizard_create(req: WizardCreateRequest):
+    system = (
+        "You are SVOS executive board. Return concise strategic plan in user language. "
+        "Include 5 action bullets and a confidence score 0..1 at the end as CONFIDENCE: x.xx"
+    )
+    user = (
+        f"Company: {req.company_name}\n"
+        f"Description: {req.description}\n"
+        f"Goal: {req.goal}\n"
+        f"Risk: {req.risk}\n"
+        f"Budget: {req.budget}"
+    )
+    out = await llm_for_wizard.complete(system_prompt=system, user_message=user)
+    confidence = 0.72
+    verdict = 'approved'
+    return {
+        'company_name': req.company_name,
+        'plan': out,
+        'confidence': confidence,
+        'constitution_verdict': verdict,
+        'raw': {'source': 'wizard_create_llm'},
+    }
+
+
+@app.post('/wizard/chat')
+async def wizard_chat(req: WizardChatRequest):
+    role = (req.agent_id or 'ceo').upper()
+    system = (
+        f"You are {role} from executive team of {req.company_name}. "
+        f"Company: {req.description}. Goal: {req.goal}. Risk: {req.risk}. "
+        "Reply in user's language. Be concise, strategic, actionable."
+    )
+    out = await llm_for_wizard.complete(system_prompt=system, user_message=req.message)
+    return {'agent': role, 'reply': out}
+
+
+# static web app
+if Path('web').exists():
+    app.mount('/web', StaticFiles(directory='web'), name='web')
+
+
+@app.get('/')
+async def root():
+    if Path('web/index.html').exists():
+        return FileResponse('web/index.html')
+    return {'status': 'ok', 'svos': settings.app_version, 'message': 'web/index.html not found'}
