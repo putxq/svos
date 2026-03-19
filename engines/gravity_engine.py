@@ -5,6 +5,29 @@ import re
 from typing import Any
 
 
+def parse_llm_json(text: str) -> dict:
+    """???? ?? Claude ??????? JSON"""
+    text = (text or "").strip()
+    text = re.sub(r'^```json\s*', '', text)
+    text = re.sub(r'^```\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+    text = text.strip()
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # ???? ????? ??? { ???? }
+        start = text.find('{')
+        end = text.rfind('}')
+        if start != -1 and end != -1:
+            try:
+                return json.loads(text[start:end+1])
+            except Exception:
+                pass
+    return {}
+
+
+
 class GravityEngine:
     """محرك الجاذبية — يكتشف أين الطلب الحقيقي في السوق"""
 
@@ -97,49 +120,69 @@ class GravityEngine:
         )
 
         raw = await self.llm.complete(system_prompt=system_prompt, user_message=user_prompt)
-        parsed = self._safe_json(
-            raw,
-            fallback={
-                "opportunities": [],
-                "pain_points": [],
-                "competition_level": "medium",
-                "entry_strategy": "",
-                "time_to_revenue": "",
-            },
+        raw_response = raw
+        parsed = parse_llm_json(raw_response)
+
+        # ?????? ????? ? ?? ???? ?? ????? ??????
+        opportunities = (
+            parsed.get("opportunities")
+            or parsed.get("analysis", {}).get("opportunities")
+            or parsed.get("market_opportunities")
+            or []
         )
 
-        opportunities = []
-        for o in (parsed.get("opportunities") or [])[:3]:
-            if isinstance(o, dict):
-                conf = float(o.get("confidence", 0) or 0)
-                if conf > 1:
-                    conf = conf / 100.0
-                opportunities.append(
-                    {
-                        "title": str(o.get("title", "Opportunity")),
-                        "description": str(o.get("description", "")),
-                        "confidence": max(0.0, min(1.0, conf)),
-                        "evidence": str(o.get("evidence", "search-based signal")),
-                    }
-                )
-            elif isinstance(o, str):
-                opportunities.append(
-                    {
-                        "title": o,
-                        "description": "",
-                        "confidence": 0.5,
-                        "evidence": "search-based signal",
-                    }
-                )
+        # ???? ??? ?? ????
+        clean_opportunities = []
+        for opp in opportunities:
+            if not isinstance(opp, dict):
+                continue
+            conf_raw = opp.get("confidence", 0) or 0
+            try:
+                conf = float(conf_raw)
+            except Exception:
+                conf = 0.0
+            clean_opportunities.append(
+                {
+                    "title": opp.get("title") or opp.get("opportunity", "Unknown"),
+                    "description": opp.get("description") or opp.get("rationale", ""),
+                    "confidence": (conf / 100.0) if conf > 1 else conf,
+                    "evidence": opp.get("evidence") or opp.get("rationale", ""),
+                }
+            )
+
+        # ??? ????? ????? ??????
+        competition = (
+            parsed.get("competition_level")
+            or parsed.get("analysis", {}).get("competition_level")
+            or parsed.get("competition", {}).get("level")
+            or "unknown"
+        )
+        entry_strategy = (
+            parsed.get("entry_strategy")
+            or parsed.get("recommended_entry_strategy")
+            or parsed.get("analysis", {}).get("entry_strategy")
+            or ""
+        )
+        time_to_revenue = (
+            parsed.get("time_to_revenue")
+            or parsed.get("time_to_first_revenue")
+            or parsed.get("analysis", {}).get("time_to_revenue")
+            or ""
+        )
+        pain_points = (
+            parsed.get("pain_points")
+            or parsed.get("analysis", {}).get("pain_points")
+            or []
+        )
 
         return {
             "industry": industry,
             "region": region,
-            "opportunities": opportunities,
-            "pain_points": [str(x) for x in (parsed.get("pain_points") or [])[:3]],
-            "competition_level": str(parsed.get("competition_level", "medium")),
-            "entry_strategy": str(parsed.get("entry_strategy", "")),
-            "time_to_revenue": str(parsed.get("time_to_revenue", "")),
+            "opportunities": clean_opportunities[:3],
+            "pain_points": [str(x) for x in pain_points[:3]],
+            "competition_level": str(competition),
+            "entry_strategy": str(entry_strategy),
+            "time_to_revenue": str(time_to_revenue),
             "search_sources": len(queries),
             "raw_search_results": len(gathered),
         }
