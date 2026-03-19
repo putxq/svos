@@ -55,6 +55,15 @@ class GravityEngine:
                 item["query"] = q
                 gathered.append(item)
 
+        total_results = len(gathered)
+        # ??? ?? ????? ? ???? ??? ????
+        if total_results == 0:
+            fallback_result = await self.search.execute(f"{industry} market opportunity", max_results=5)
+            for item in fallback_result.get("results", []):
+                item = dict(item)
+                item["query"] = f"{industry} market opportunity"
+                gathered.append(item)
+
         compact = []
         for i, r in enumerate(gathered[:18], 1):
             compact.append(
@@ -189,10 +198,15 @@ class GravityEngine:
         """
         الدالة الرئيسية — تستقبل وصف نشاط وترجع خريطة الطلب.
         """
-        parse_system = (
-            "Extract structured fields from a business description. Return JSON only with: "
-            "industry, region, service."
-        )
+        parse_system = """Extract business parameters from this description.
+Return ONLY a JSON object with these exact keys:
+{"industry": "...", "region": "...", "service": "..."}
+Examples:
+- "???? ????? ???? ??????? ?? ????????" -> {"industry": "restaurants", "region": "Saudi Arabia", "service": "digital marketing"}
+- "Digital marketing for restaurants in Dubai" -> {"industry": "restaurants", "region": "Dubai", "service": "digital marketing"}
+- "E-commerce platform for fashion in Egypt" -> {"industry": "fashion", "region": "Egypt", "service": "e-commerce"}
+Always return English values for better search results.
+Return ONLY the JSON. No markdown. No explanation."""
         parse_user = (
             f"Business description: {business_description}\n"
             "Return JSON with industry, region, service."
@@ -206,9 +220,15 @@ class GravityEngine:
             },
         )
 
-        industry = str(parsed.get("industry", business_description))
-        region = str(parsed.get("region", "global"))
-        service = str(parsed.get("service", "digital services"))
+        industry = str(parsed.get("industry", "")).strip()
+        region = str(parsed.get("region", "")).strip()
+        service = str(parsed.get("service", "")).strip()
+
+        if not industry or not region or not service:
+            # fallback: ?????? ????? ?????? ?? search query
+            industry = business_description
+            region = "global"
+            service = "business"
 
         market = await self.scan_market(industry=industry, region=region, service=service)
 
