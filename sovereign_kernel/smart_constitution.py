@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,17 @@ try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
     yaml = None
+
+
+
+
+def clean_json_response(text: str) -> str:
+    # ???? markdown code fences
+    text = text.strip()
+    text = re.sub(r'^```json\s*', '', text)
+    text = re.sub(r'^```\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+    return text.strip()
 
 
 class ConstitutionVerdict(BaseModel):
@@ -117,7 +129,7 @@ class SmartConstitution:
         )
 
         try:
-            parsed = json.loads(raw)
+            parsed = json.loads(clean_json_response(raw))
         except Exception:
             # Graceful fallback when model returns non-JSON
             parsed = {

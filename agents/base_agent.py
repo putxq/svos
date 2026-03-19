@@ -69,9 +69,13 @@ class BaseAgent:
     # === التفكير ===
     async def think(self, task: str, context: dict) -> ThinkResult:
         system_prompt = (
-            "You are an executive AI agent. Think end-to-end: understand task, plan, "
-            "estimate confidence, and decide if discussion/escalation is needed. "
-            "Return strict JSON with keys: plan, confidence, reasoning, needs_discussion, needs_escalation."
+            "You are an executive AI agent. You must return a JSON with:\n"
+            "- plan: a list of 3-5 concrete action steps (never empty)\n"
+            "- confidence: a float between 0.0 and 1.0\n"
+            "- reasoning: why you chose this plan\n"
+            "- needs_discussion: true if confidence < 0.85\n"
+            "- needs_escalation: true if confidence < 0.40\n"
+            "Return strict JSON only."
         )
         user_message = f"Agent: {self.name} ({self.role})\nTask: {task}\nContext: {context}"
 
@@ -96,12 +100,20 @@ class BaseAgent:
         else:
             confidence = max(0.0, min(1.0, confidence_raw))
 
+        plan_items = [str(x) for x in (raw.get("plan") or []) if str(x).strip()]
+        if not plan_items:
+            plan_items = [
+                "Validate market demand in target segment",
+                "Define a low-risk pilot offer",
+                "Launch pilot with measurable KPIs",
+            ]
+
         result = ThinkResult(
-            plan=[str(x) for x in (raw.get("plan") or [])],
+            plan=plan_items,
             confidence=confidence,
             reasoning=str(raw.get("reasoning", "")),
-            needs_discussion=bool(raw.get("needs_discussion", False)),
-            needs_escalation=bool(raw.get("needs_escalation", False)),
+            needs_discussion=bool(raw.get("needs_discussion", confidence < 0.85)),
+            needs_escalation=bool(raw.get("needs_escalation", confidence < 0.40)),
         )
 
         await self.remember("last_think", result.model_dump(), "episodic")

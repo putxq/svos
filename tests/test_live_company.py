@@ -36,7 +36,7 @@ async def test_first_live_decision():
     print(f" الإجراء: {safety_check.action}")
 
     if not safety_check.safe:
-        print(" ⛔ العملية محظورة لأسباب أمنية")
+        print(" [BLOCKED] العملية محظورة لأسباب أمنية")
         return
 
     # --- الخطوة 2: CEO يفكر ---
@@ -106,10 +106,10 @@ async def test_first_live_decision():
     print("\n[6/6] القرار النهائي...")
     print("=" * 60)
     if verdict.approved and confidence.score >= 0.4:
-        print("✅ القرار: موافقة — ندخل سوق المطاعم!")
+        print("[OK] القرار: موافقة — ندخل سوق المطاعم!")
         outcome = True
     else:
-        print("❌ القرار: رفض — لا ندخل الآن")
+        print("[REJECTED] القرار: رفض — لا ندخل الآن")
         if verdict.alternatives:
             print(f" بدائل: {verdict.alternatives}")
         outcome = False
@@ -122,15 +122,16 @@ async def test_first_live_decision():
             outcome="موافقة" if outcome else "رفض",
             success=outcome,
         )
-        print("\n📚 تم حفظ القرار في الذاكرة الاستراتيجية")
+        print("\n[SAVED] تم حفظ القرار في الذاكرة الاستراتيجية")
         print(" (قانون التعلم: trace موجود = التعلم مسموح)")
     else:
-        print("\n⚠️ لم يُحفظ — لا trace متاح (القانون 1)")
+        print("\n[WARNING] لم يُحفظ — لا trace متاح (القانون 1)")
 
     print("\n" + "=" * 60)
-    print(" SVOS — أول قرار لشركة رقمية حية ✅")
+    print(" SVOS — أول قرار لشركة رقمية حية [OK]")
     print("=" * 60)
 
 
 if __name__ == "__main__":
     asyncio.run(test_first_live_decision())
+
