@@ -1,30 +1,33 @@
 {
   "profile": {
-    "company_name": "???? ??? ???????",
-    "description": "???? ????? ???? ??????? ?? ????????",
-    "goal": "زيادة المبيعات والعملاء",
+    "company_name": "???? ???",
+    "description": "????? ???? ???????",
+    "goal": "Increase sales and clients",
     "risk_appetite": "moderate",
     "budget": "$5,000",
-    "lang": "ar"
+    "lang": "en"
   },
-  "decision": "Launch first pilot for ???? ??? ???????",
+  "decision": "Launch first pilot for ???? ???",
   "verdict": {
     "approved": false,
-    "confidence": 0.15,
-    "reasoning": "Decision cannot be evaluated due to critical missing information. The pilot project name is redacted/corrupted (????), making it impossible to assess alignment with mission, values, and constraints. The business profile mission is also corrupted. The source 'wizard' is non-standard and lacks proper documentation trail. Without clarity on what is being launched, financial impact assessment, risk analysis, and constitutional compliance cannot be determined.",
+    "confidence": 0.95,
+    "reasoning": "Decision cannot be evaluated due to critical missing information. The proposal contains multiple redacted/placeholder fields ('????') including: pilot name/scope, business mission, and specific objectives. The Constitution is also incomplete with empty mission, values, and constraints. Without clear decision parameters, financial details, risk assessment, and alignment criteria, this decision fails basic governance requirements for constitutional compliance evaluation.",
     "conditions": [
-      "Provide complete, unredacted pilot project name and description",
-      "Clarify business mission statement (currently corrupted)",
-      "Document decision source with proper governance trail (replace 'wizard' reference)",
-      "Provide detailed budget breakdown against $5,000 constraint",
-      "Submit risk assessment aligned with 'moderate' risk appetite",
-      "Confirm alignment with stated values: quality, transparency, growth"
+      "Provide complete, unredacted pilot name and scope",
+      "Clarify specific business mission and pilot objectives",
+      "Supply detailed budget breakdown within $5,000 constraint",
+      "Define measurable success criteria and timeline",
+      "Complete Constitution with mission, values, and constraints",
+      "Specify which business values (quality/transparency/growth) this pilot advances",
+      "Identify and document all legal/ethical/compliance considerations",
+      "Provide risk assessment aligned with 'moderate' risk appetite"
     ],
     "alternatives": [
-      "Defer decision pending information completeness",
-      "Request formal proposal submission through standard governance channels",
-      "Escalate to founder for override decision if time-critical (confidence score 0.15 < 0.2 threshold)"
+      "Resubmit decision with complete information for full evaluation",
+      "Escalate to founder for guidance on redacted proposal elements",
+      "Conduct discovery phase to define pilot scope before board review",
+      "Request clarification from 'wizard' source on missing context"
     ]
   },
-  "created_at": "2026-03-19T20:16:32.281803"
+  "created_at": "2026-03-19T20:23:08.350743"
 }
