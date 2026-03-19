@@ -1,33 +1,30 @@
 {
   "profile": {
-    "company_name": "???? ???",
-    "description": "????? ???? ???????",
+    "company_name": "???? ??? ???????",
+    "description": "????? ???? ??????? ?? ??????",
     "goal": "Increase sales and clients",
     "risk_appetite": "moderate",
     "budget": "$5,000",
     "lang": "en"
   },
-  "decision": "Launch first pilot for ???? ???",
+  "decision": "Launch first pilot for ???? ??? ???????",
   "verdict": {
     "approved": false,
     "confidence": 0.95,
-    "reasoning": "Decision cannot be evaluated due to critical missing information. The proposal contains multiple redacted/placeholder fields ('????') including: pilot name/scope, business mission, and specific objectives. The Constitution is also incomplete with empty mission, values, and constraints. Without clear decision parameters, financial details, risk assessment, and alignment criteria, this decision fails basic governance requirements for constitutional compliance evaluation.",
+    "reasoning": "Decision cannot be evaluated due to critical information deficiency. The decision content is obfuscated (????) making it impossible to assess against constitutional governance requirements. The source is marked as 'wizard' which lacks institutional authority. The constitution is empty (no mission, values, or constraints defined), preventing proper compliance verification. This represents a governance failure at the foundational level.",
     "conditions": [
-      "Provide complete, unredacted pilot name and scope",
-      "Clarify specific business mission and pilot objectives",
-      "Supply detailed budget breakdown within $5,000 constraint",
-      "Define measurable success criteria and timeline",
-      "Complete Constitution with mission, values, and constraints",
-      "Specify which business values (quality/transparency/growth) this pilot advances",
-      "Identify and document all legal/ethical/compliance considerations",
-      "Provide risk assessment aligned with 'moderate' risk appetite"
+      "Provide unobfuscated decision description with specific pilot details",
+      "Clarify decision authority and source legitimacy",
+      "Establish complete constitutional framework before proceeding",
+      "Define measurable success criteria and pilot scope",
+      "Confirm budget allocation aligns with $5,000 constraint"
     ],
     "alternatives": [
-      "Resubmit decision with complete information for full evaluation",
-      "Escalate to founder for guidance on redacted proposal elements",
-      "Conduct discovery phase to define pilot scope before board review",
-      "Request clarification from 'wizard' source on missing context"
+      "Defer decision pending constitution completion and governance structure clarification",
+      "Route through proper governance channels with transparent decision documentation",
+      "Conduct governance audit to establish baseline compliance framework",
+      "Require founder/board clarification on decision authority and constitutional parameters"
     ]
   },
-  "created_at": "2026-03-19T20:23:08.350743"
+  "created_at": "2026-03-19T20:28:45.592516+00:00"
 }

@@ -1,17 +1,18 @@
-import sys
+﻿import sys
 import os
 import io
-# ??? UTF-8 ??? Windows
+# فرض UTF-8 على Windows
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="replace")
     os.system("chcp 65001 >nul 2>&1")
 
 import asyncio
 import json
 import locale
 import re
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 
 from core.llm_provider import LLMProvider
@@ -135,7 +136,6 @@ TEXTS = {
 
 
 def get_text(lang, key):
-    """يجيب النص بلغة المستخدم — يرجع للإنجليزي إذا مالقى"""
     return TEXTS.get(lang, TEXTS["en"]).get(key, TEXTS["en"].get(key, key))
 
 
@@ -144,8 +144,8 @@ def clear_screen():
 
 
 def safe_company_dir_name(name: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", name or "company")
-    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    cleaned = re.sub(r"[^\w\- ]+", "", name or "company", flags=re.UNICODE)
+    cleaned = cleaned.replace(" ", "_").strip("_")
     return cleaned or "company"
 
 
@@ -161,32 +161,44 @@ def print_banner(lang):
 def ask_questions(lang):
     t = lambda key: get_text(lang, key)
     print(f" {t('step1')}")
-    company_name = input(" > ").strip()
+    company_name = input(" > ").strip() or "My Company"
 
     print(f"\n {t('step2')}")
     print(f" {t('step2_example')}")
-    description = input(" > ").strip()
+    description = input(" > ").strip() or "Digital services"
 
     print(f"\n {t('step3')}")
     goals = [t('goal1'), t('goal2'), t('goal3'), t('goal4')]
     for i, g in enumerate(goals, 1):
         print(f" {i}. {g}")
     g_choice = input(f" {t('choose_number')} > ").strip() or "1"
-    goal = goals[max(1, min(4, int(g_choice))) - 1]
+    try:
+        g_idx = max(1, min(4, int(g_choice))) - 1
+    except ValueError:
+        g_idx = 0
+    goal = goals[g_idx]
 
     print(f"\n {t('step4')}")
     risks = [t('risk1'), t('risk2'), t('risk3')]
     for i, r in enumerate(risks, 1):
         print(f" {i}. {r}")
     r_choice = input(f" {t('choose_number')} > ").strip() or "2"
-    risk_appetite = ["conservative", "moderate", "aggressive"][max(1, min(3, int(r_choice))) - 1]
+    try:
+        r_idx = max(1, min(3, int(r_choice))) - 1
+    except ValueError:
+        r_idx = 1
+    risk_appetite = ["conservative", "moderate", "aggressive"][r_idx]
 
     print(f"\n {t('step5')}")
     budgets = ["$1,000", "$5,000", "$10,000+"]
     for i, b in enumerate(budgets, 1):
         print(f" {i}. {b}")
     b_choice = input(f" {t('choose_number')} > ").strip() or "2"
-    budget = budgets[max(1, min(3, int(b_choice))) - 1]
+    try:
+        b_idx = max(1, min(3, int(b_choice))) - 1
+    except ValueError:
+        b_idx = 1
+    budget = budgets[b_idx]
 
     return {
         "company_name": company_name,
@@ -198,8 +210,10 @@ def ask_questions(lang):
     }
 
 
-async def build_company(profile, lang):
+async def build_company(profile):
+    lang = profile.get("lang", "en")
     t = lambda key: get_text(lang, key)
+
     print(f"\n {t('building')}")
     print(f" - {t('building_constitution')}")
     print(f" - {t('building_team')}")
@@ -223,13 +237,16 @@ async def build_company(profile, lang):
 
     company_dir = Path("companies") / safe_company_dir_name(profile["company_name"])
     company_dir.mkdir(parents=True, exist_ok=True)
+
     payload = {
         "profile": profile,
         "decision": decision,
         "verdict": verdict.model_dump(),
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
-    (company_dir / "company.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    with open(company_dir / "company.json", "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
     return str(company_dir), decision, verdict
 
 
@@ -246,7 +263,6 @@ def print_result(profile, company_dir, decision, verdict, lang):
 
 
 async def chat_mode(profile, team, lang):
-    """وضع المحادثة — المستخدم يتكلم مع شركته"""
     llm = LLMProvider()
     t = lambda key: get_text(lang, key)
 
@@ -289,11 +305,10 @@ def main():
     clear_screen()
     lang = detect_language()
 
-    print(" Language / اللغة:")
+    print(" Language:")
     print(" 1. English")
     print(" 2. العربية")
     print(" 3. Francais")
-    print(f" (auto-detected: {lang})")
     choice = input(" > ").strip()
 
     if choice == "1":
@@ -304,22 +319,10 @@ def main():
         lang = "fr"
 
     print_banner(lang)
-
-    try:
-        profile = ask_questions(lang)
-        company_dir, decision, verdict = asyncio.run(build_company(profile, lang))
-        print_result(profile, company_dir, decision, verdict, lang)
-
-        team = {}
-        asyncio.run(chat_mode(profile, team, lang))
-
-    except KeyboardInterrupt:
-        print("\n\n Cancelled.")
-    except Exception as e:
-        print(f"\n Error: {e}")
-        import traceback
-
-        traceback.print_exc()
+    profile = ask_questions(lang)
+    company_dir, decision, verdict = asyncio.run(build_company(profile))
+    print_result(profile, company_dir, decision, verdict, lang)
+    asyncio.run(chat_mode(profile, {}, lang))
 
 
 if __name__ == "__main__":
