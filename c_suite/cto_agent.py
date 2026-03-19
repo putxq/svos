@@ -1,59 +1,31 @@
-from anthropic import AsyncAnthropic
-from core.config import settings
+from agents.base_agent import BaseAgent
 
-client = AsyncAnthropic(
- api_key=settings.anthropic_api_key
-)
-MODEL = "claude-haiku-4-5-20251001"
 
-async def _call(system: str, user: str) -> str:
- msg = await client.messages.create(
- model=MODEL, max_tokens=600,
- system=system,
- messages=[{"role":"user","content":user}]
- )
- return msg.content[0].text.strip()
+class CTOAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(agent_id="cto", role="CTO", system_prompt="أنت CTO استراتيجي.")
 
-async def cto_decide(
- business_context: str,
- current_tech: str,
- tech_goals: list[str]
-) -> dict:
+    async def decide(self, business_context: str, current_tech: str, tech_goals: list[str]) -> dict:
+        tech_strategy = await self.think(
+            f"النشاط: {business_context}\nالتقنية الحالية: {current_tech}\nالأهداف: {', '.join(tech_goals)}\n"
+            "ضع استراتيجية تقنية واضحة: أدوات، أولويات، مخاطر وتخفيف."
+        )
+        ai_roadmap = await self.think(
+            f"النشاط: {business_context}\nالأهداف: {', '.join(tech_goals)}\n"
+            "أعط خارطة طريق AI: الآن/30 يوم/90 يوم + تكلفة تقريبية."
+        )
+        security = await self.think(
+            f"النشاط: {business_context}\nالتقنية: {current_tech}\n"
+            "حدد 3 مخاطر أمنية مع خطوة فورية لكل مخاطرة."
+        )
+        return {
+            "role": "CTO",
+            "tech_strategy": tech_strategy,
+            "ai_roadmap": ai_roadmap,
+            "security_assessment": security,
+            "status": "active",
+        }
 
- tech_strategy = await _call(
- """أنت CTO استراتيجي.
-ضع استراتيجية تقنية واضحة:
-- الأدوات المطلوبة
-- الأولويات التقنية
-- المخاطر وكيفية تجنبها""",
- f"النشاط: {business_context}\n"
- f"التقنية الحالية: {current_tech}\n"
- f"الأهداف: {', '.join(tech_goals)}"
- )
 
- ai_roadmap = await _call(
- """أنت خبير تحول رقمي بالذكاء الاصطناعي.
-أعطِ خارطة طريق AI لهذا النشاط:
-- ما يمكن أتمتته فوراً
-- ما يحتاج 30 يوم
-- ما يحتاج 90 يوم
-مع تكلفة تقريبية لكل مرحلة.""",
- f"النشاط: {business_context}\n"
- f"الأهداف: {', '.join(tech_goals)}"
- )
-
- security = await _call(
- """أنت خبير أمن معلومات.
-حدد أهم 3 مخاطر أمنية لهذا النشاط
-مع خطوة واحدة فورية لكل مخاطرة.""",
- f"النشاط: {business_context}\n"
- f"التقنية: {current_tech}"
- )
-
- return {
- "role": "CTO",
- "tech_strategy": tech_strategy,
- "ai_roadmap": ai_roadmap,
- "security_assessment": security,
- "status": "active"
- }
+async def cto_decide(business_context: str, current_tech: str, tech_goals: list[str]) -> dict:
+    return await CTOAgent().decide(business_context, current_tech, tech_goals)

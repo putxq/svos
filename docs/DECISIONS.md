@@ -1,0 +1,1 @@
+﻿# DECISIONS (ADR short)\n

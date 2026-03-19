@@ -1,33 +1,11 @@
-from datetime import datetime
-
-from anthropic import AsyncAnthropic
-
-from core.config import settings
+from agents.base_agent import BaseAgent
 from agents.cfo.prompts import SYSTEM_PROMPT
 from agents.cfo.tools import format_goals
 
 
-class CFOAgent:
+class CFOAgent(BaseAgent):
     def __init__(self):
-        if not settings.anthropic_api_key:
-            raise RuntimeError('ANTHROPIC_API_KEY is not configured')
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-        self.memory = []  # قصيرة المدى
-
-    def remember(self, key, value):
-        self.memory.append(
-            {
-                "key": key,
-                "value": value,
-                "ts": datetime.utcnow().isoformat(),
-            }
-        )
-
-    def recall(self, key):
-        for m in reversed(self.memory):
-            if m["key"] == key:
-                return m["value"]
-        return None
+        super().__init__(agent_id="cfo", role="CFO", system_prompt=SYSTEM_PROMPT)
 
     async def decide(self, business_context: str, goals: list[str], task: str) -> str:
         prompt = (
@@ -36,18 +14,6 @@ class CFOAgent:
             f"المهمة:\n{task}\n\n"
             "قدّم قرارًا ماليًا: التدفق النقدي، التسعير، ضبط التكاليف، ومؤشرات قياس أسبوعية."
         )
-
-        msg = await self.client.messages.create(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=700,
-            temperature=0.2,
-            system=SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': prompt}],
-        )
-
-        parts: list[str] = []
-        for block in msg.content:
-            text = getattr(block, 'text', None)
-            if text:
-                parts.append(text)
-        return "\n".join(parts).strip()
+        out = await self.think(prompt)
+        self.remember("last_decision", out)
+        return out

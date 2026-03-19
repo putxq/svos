@@ -1,53 +1,27 @@
-from datetime import datetime
-
-from anthropic import AsyncAnthropic
-
-from core.config import settings
+from agents.base_agent import BaseAgent
 from agents.ceo.prompts import SYSTEM_PROMPT
-from agents.ceo.tools import format_goals
+from agents.ceo.tools import format_goals, search_market
 
 
-class CEOAgent:
+class CEOAgent(BaseAgent):
     def __init__(self):
-        if not settings.anthropic_api_key:
-            raise RuntimeError('ANTHROPIC_API_KEY is not configured')
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-        self.memory = []  # قصيرة المدى
-
-    def remember(self, key, value):
-        self.memory.append(
-            {
-                "key": key,
-                "value": value,
-                "ts": datetime.utcnow().isoformat(),
-            }
+        super().__init__(
+            agent_id="ceo",
+            role="CEO",
+            system_prompt=SYSTEM_PROMPT,
+            tools={"search_market": search_market},
         )
 
-    def recall(self, key):
-        for m in reversed(self.memory):
-            if m["key"] == key:
-                return m["value"]
-        return None
-
     async def decide(self, business_context: str, goals: list[str], task: str) -> str:
+        self.remember("last_context", business_context)
+        market_hint = await self.use_tools("search_market", query=f"{business_context} {task}")
         prompt = (
             f"سياق النشاط:\n{business_context}\n\n"
             f"الأهداف:\n{format_goals(goals)}\n\n"
             f"المهمة:\n{task}\n\n"
+            f"إشارة سوقية:\n{market_hint[:400]}\n\n"
             "قدّم قرار تنفيذي وخطة أسبوعية مختصرة مع نقاط عملية ومؤشرات قياس."
         )
-
-        msg = await self.client.messages.create(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=700,
-            temperature=0.3,
-            system=SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': prompt}],
-        )
-
-        parts: list[str] = []
-        for block in msg.content:
-            text = getattr(block, 'text', None)
-            if text:
-                parts.append(text)
-        return "\n".join(parts).strip()
+        out = await self.think(prompt)
+        self.remember("last_decision", out)
+        return out

@@ -79,3 +79,26 @@ class SphereResponse(BaseModel):
     owner: str
     status: str
     constitution: dict
+
+
+class ErrorResponse(BaseModel):
+    code: str
+    message: str
+    details: dict | None = None
+
+
+class LLMRequest(BaseModel):
+    system: str
+    user: str
+    max_tokens: int | None = None
+
+
+class LLMResponse(BaseModel):
+    provider: str
+    model: str
+    output: str
+
+
+class HealthResponse(BaseModel):
+    status: str
+    svos: str
