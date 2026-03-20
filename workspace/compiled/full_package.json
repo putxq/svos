@@ -1,11 +1,87 @@
 {
   "idea": "Digital marketing agency for restaurants in Riyadh",
-  "prd": {},
-  "landing_page": {},
-  "sales_email": {},
-  "launch_plan": {},
-  "budget_estimate": {},
-  "risks": [],
-  "competitive_edge": "",
-  "idea_summary": "Digital marketing agency for restaurants in Riyadh"
+  "prd": {
+    "product_name": "RestaurantBoost Riyadh",
+    "problem": "Riyadh restaurants lack affordable, consistent digital marketing; most have no Instagram strategy, waste money on ineffective ads, and miss WhatsApp customer engagement opportunities",
+    "solution": "AI agents create weekly Instagram posts, manage Google Ads campaigns, build WhatsApp broadcast lists, and provide monthly performance reports—all automated and delivered ready-to-use",
+    "target_customer": "Independent restaurants and small chains in Riyadh (50-200 covers/day) with 50k-500k SAR annual revenue",
+    "value_proposition": "Get professional marketing for 1/10th the cost of hiring an agency; AI ensures consistency 24/7; we speak Arabic and understand Riyadh dining culture",
+    "mvp_features": [
+      "Weekly Instagram carousel posts (food photography + captions in Arabic)",
+      "Google Ads campaign setup and weekly optimization (budget $50-200/week)",
+      "WhatsApp broadcast list management and promotional message templates",
+      "Monthly performance dashboard (followers gained, ad spend ROI, engagement rate)",
+      "Customer support via WhatsApp (response within 4 hours)"
+    ],
+    "success_metrics": [
+      "10 paying clients by week 8",
+      "Average client Instagram growth: 200+ followers/month",
+      "Average Google Ads ROAS: 3:1 or higher",
+      "Client retention rate: 80%+",
+      "Monthly recurring revenue: $3,000+"
+    ]
+  },
+  "landing_page": {
+    "headline": "تسويق رقمي احترافي لمطاعمك في الرياض - بدون فريق، بدون تعقيد",
+    "subheadline": "نحن ندير إنستجرام وإعلانات جوجل والواتس آب لك. كل أسبوع محتوى جديد، كل شهر نتائج حقيقية.",
+    "cta_button": "احصل على عرض مجاني لمدة 14 يوم",
+    "benefits": [
+      "محتوى إنستجرام احترافي كل أسبوع (صور + نصوص عربية)",
+      "إدارة إعلانات جوجل بميزانية تختارها (من 50 إلى 500 ريال أسبوعياً)",
+      "قائمة واتس آب للعملاء + رسائل ترويجية مدروسة",
+      "تقرير شهري يوضح النمو والعائد على الاستثمار",
+      "دعم عربي سريع عبر الواتس آب"
+    ],
+    "social_proof": "استخدم: '5 مطاعم في الرياض زادت طلباتهم 40% في الشهر الأول' + صور قبل/بعد لحسابات إنستجرام",
+    "pricing_hint": "عرض خاص: 299 ريال للأسابيع الأربعة الأولى، ثم 399 ريال شهرياً (توفير 100 ريال)"
+  },
+  "sales_email": {
+    "subject": "مطعمك يحتاج إلى إنستجرام احترافي - عرض خاص من RestaurantBoost",
+    "body": "السلام عليكم ورحمة الله وبركاته،\n\nاسمي أحمد من فريق RestaurantBoost. لاحظت أن مطعمك [اسم المطعم] في الرياض وليس لديك إنستجرام نشط أو أنك تنشر عشوائياً.\n\nهنا المشكلة: معظم الزبائن في الرياض يبحثون عن مطاعم على إنستجرام وجوجل قبل الحضور. إذا لم تكن موجود بشكل احترافي، تخسر أموال كتيرة.\n\nنحن في RestaurantBoost نحل هذه المشكلة:\n- نصمم محتوى إنستجرام احترافي كل أسبوع (صور الأكلات + نصوص عربية)\n- ندير إعلانات جوجل والفيسبوك بكفاءة عالية\n- نبني قائمة واتس آب وننشر عروضك\n- كل شهر نرسل لك تقرير يوضح كم زبون جديد جاء من التسويق\n\nالسعر: 299 ريال للشهر الأول (توفير 100 ريال)، ثم 399 ريال شهرياً.\n\nهل تريد أن نعمل معك 14 يوم مجاني؟ رد على الرسالة وقول لي \"نعم\" وبنبدأ فوراً.\n\nتحياتي،\nأحمد\nRestaurantBoost Riyadh\nالواتس: [رقمك]",
+    "follow_up": "السلام عليكم،\n\nلم أسمع منك بخصوص العرض المجاني. قد تكون مشغول - لا مشكلة.\n\nبس أحب أقول لك: كل يوم بدون تسويق احترافي = زبائن تروح لمطعم ثاني.\n\nإذا بدك نتكلم أكتر أو عندك أسئلة، أنا هنا. رد على الرسالة أو شوف حسابنا على الإنستجرام @restaurantboost_riyadh\n\nتحياتي،\nأحمد"
+  },
+  "launch_plan": {
+    "week_1": [
+      "Setup: اشتري domain (restaurantboost-riyadh.com) من Namecheap ($12/سنة)",
+      "Setup: أنشئ landing page بسيطة على Carrd.co ($99/سنة) - 3 ساعات عمل AI",
+      "Setup: أنشئ حسابات: Gmail للعملاء، WhatsApp Business، Instagram @restaurantboost_riyadh",
+      "Content: جهز 4 نماذج محتوى Instagram (صور + نصوص عربية) لاستخدامها مع العملاء الأوائل",
+      "Sales: اجمع 20 رقم هاتف مطاعم من Google Maps + Instagram (ابحث عن حسابات غير نشطة)",
+      "Sales: ابدأ إرسال 5 رسائل WhatsApp يومية بالعرض المجاني"
+    ],
+    "week_2": [
+      "Sales: استهدف 50 مطعم إضافي - أرسل رسائل WhatsApp مخصصة (اذكر اسم المطعم + مشكلة محددة)",
+      "Product: أنشئ نموذج Google Sheet لتتبع عملاء (اسم المطعم، الرقم، الحالة، التاريخ المتوقع)",
+      "Product: جهز 3 قوالب إعلانات Google Ads (بميزانيات 50، 100، 200 ريال أسبوعياً)",
+      "Marketing: انشر 3 صور من حسابك الخاص تظهر نتائج (مثل: قبل/بعد لحساب إنستجرام وهمي لكن حقيقي)",
+      "Target: احصل على أول عميل مدفوع أو 2 عميل تجريبي"
+    ],
+    "week_3": [
+      "Onboarding: أنشئ عملية Onboarding بسيطة (نموذج Google Form يجمع معلومات المطعم)",
+      "Product: ابدأ تسليم محتوى Instagram أسبوعي لأول عميل (يوم الأحد كل أسبوع)",
+      "Analytics: جهز Google Sheets dashboard يعرض: followers gained, engagement rate, ad spend, leads",
+      "Sales: اجمع شهادات من أول عميل (حتى لو بسيطة) وانشرها على Instagram",
+      "Target: 3-4 عملاء مدفوعين"
+    ],
+    "week_4": [
+      "Scale: اضاعف عدد الرسائل الباردة (100 رسالة WhatsApp من أرقام مختلفة أو حسابات AI)",
+      "Product: أتمتة تقارير شهرية (Google Sheets template يملأ نفسه بنفسه من Google Analytics)",
+      "Retention: تواصل مع أول 3 عملاء - اسأل عن رضاهم، اعرض تحسينات",
+      "Marketing: انشر case study أول (مطعم حقيقي، نتائج حقيقية) على Instagram + landing page",
+      "Target: 6-8 عملاء مدفوعين بـ MRR = 2,400-3,200 ريال"
+    ]
+  },
+  "budget_estimate": {
+    "setup_cost": "$180 (Domain $12 + Carrd landing page $99 + Google Workspace $69 + misc)",
+    "monthly_cost": "$150 (Carrd $8 + Google Workspace $6 + WhatsApp Business API $50 + tools subscriptions $86 - Canva Pro, Buffer, ChatGPT API)",
+    "break_even": "Week 5-6 (بعد 4-5 عملاء مدفوعين)"
+  },
+  "risks": [
+    "Risk: عملاء يتوقعون نتائج فورية - الحل: وضح في العقد أن النتائج تأخذ 4-6 أسابيع",
+    "Risk: AI-generated content قد لا يكون احترافي - الحل: استخدم templates عالية الجودة + مراجعة يدوية سريعة قبل الإرسال",
+    "Risk: منافسة من وكالات تسويق كبيرة - الحل: ركز على مطاعم صغيرة بميزانية محدودة (لا تنافسك الوكالات الكبيرة)",
+    "Risk: عدم الحصول على عملاء في الأسابيع الأولى - الحل: قدم 14 يوم مجاني لأول 5 عملاء"
+  ],
+  "competitive_edge": "نحن أرخص 10x من الوكالات التقليدية (399 ريال vs 3,000+ ريال/شهر)، نفهم السوق السعودي والعربي، نقدم خدمة مخصصة مع دعم عربي فوري، وكل شيء مؤتمت = لا رواتب موظفين = أسعار منخفضة",
+  "idea_summary": "AI-powered digital marketing agency delivering Instagram content, Google Ads, and WhatsApp campaigns for Riyadh restaurants at $300-500/month"
 }

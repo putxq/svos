@@ -11,6 +11,9 @@ from core.llm_provider import LLMProvider
 from core.logger import log_decision
 from memory.memory_manager import MemoryManager
 from tools import create_default_registry
+from engines.gravity_engine import GravityEngine
+from engines.time_engine import TimeEngine
+from engines.reality_compiler import RealityCompiler
 
 
 class ThinkResult(BaseModel):
@@ -69,6 +72,10 @@ class BaseAgent:
 
         self.tool_registry = create_default_registry()
         self.my_tools = self.tool_registry.get_tools_for_agent(self.name)
+
+        self.gravity = GravityEngine()
+        self.time_engine = TimeEngine()
+        self.reality_compiler = RealityCompiler()
 
     # === التفكير ===
     async def think(self, task: str, context: dict) -> ThinkResult:
@@ -146,6 +153,21 @@ class BaseAgent:
                 )
         else:
             raise ValueError("memory_type must be one of episodic/semantic/strategic/identity")
+
+
+    async def scan_market(self, industry, region, service):
+        """يبحث عن فرص حقيقية في السوق"""
+        return await self.gravity.find_demand_gravity(
+            f"{service} for {industry} in {region}"
+        )
+
+    async def simulate_future(self, decision, context):
+        """يحاكي ماذا يحدث لو نفذنا قرار"""
+        return await self.time_engine.should_proceed(decision, context)
+
+    async def compile_idea(self, idea, context=None):
+        """يحوّل فكرة لحزمة تنفيذية كاملة"""
+        return await self.reality_compiler.compile(idea, context)
 
     async def recall(self, query: str, memory_type: str = "all") -> list:
         out: list[Any] = []

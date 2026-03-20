@@ -28,7 +28,7 @@ class LLMAdapter(ABC):
     name: str = "base"
 
     @abstractmethod
-    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7) -> str:
+    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 2048) -> str:
         raise NotImplementedError
 
     async def complete_with_tools(
@@ -39,7 +39,7 @@ class LLMAdapter(ABC):
         temperature: float = 0.7,
     ) -> dict[str, Any]:
         # Default fallback: no native tool use, returns text only.
-        text = await self.complete(system_prompt, user_message, temperature=temperature)
+        text = await self.complete(system_prompt, user_message, temperature=temperature, max_tokens=2048)
         return {"text": text, "tool_calls": []}
 
     async def complete_structured(
@@ -54,7 +54,7 @@ class LLMAdapter(ABC):
             f"{user_message}\n\n"
             f"Return ONLY valid JSON matching this schema:\n{schema_text}"
         )
-        raw = await self.complete(system_prompt, prompt, temperature=temperature)
+        raw = await self.complete(system_prompt, prompt, temperature=temperature, max_tokens=2048)
         try:
             return json.loads(raw)
         except Exception:
@@ -70,10 +70,10 @@ class AnthropicAdapter(LLMAdapter):
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
 
-    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7) -> str:
+    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 2048) -> str:
         msg = await self.client.messages.create(
             model=self.model,
-            max_tokens=800,
+            max_tokens=max_tokens,
             temperature=temperature,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
@@ -119,12 +119,12 @@ class OllamaAdapter(LLMAdapter):
         self.base_url = base_url.rstrip("/")
         self.model = model
 
-    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7) -> str:
+    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 2048) -> str:
         payload = {
             "model": self.model,
             "prompt": f"SYSTEM:\n{system_prompt}\n\nUSER:\n{user_message}",
             "stream": False,
-            "options": {"temperature": temperature},
+            "options": {"temperature": temperature, "num_predict": max_tokens},
         }
         async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(f"{self.base_url}/api/generate", json=payload)
@@ -218,9 +218,9 @@ class LLMProvider:
                     backoff *= 2
         raise RuntimeError(f"LLM call failed after {retries} retries: {last_error}")
 
-    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7) -> str:
+    async def complete(self, system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 2048) -> str:
         return await self._with_retry(
-            lambda: self.adapter.complete(system_prompt, user_message, temperature=temperature),
+            lambda: self.adapter.complete(system_prompt, user_message, temperature=temperature, max_tokens=max_tokens),
             operation="complete",
         )
 

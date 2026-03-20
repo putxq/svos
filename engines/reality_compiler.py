@@ -4,10 +4,21 @@ from core.llm_provider import LLMProvider
 
 
 def parse_llm_json(text):
+    import re, json
+
     text = text.strip()
     text = re.sub(r'^```json\s*', '', text)
     text = re.sub(r'^```\s*', '', text)
     text = re.sub(r'\s*```$', '', text)
+    text = text.strip()
+
+    # محاولة 1: JSON كامل
+    try:
+        return json.loads(text)
+    except:
+        pass
+
+    # محاولة 2: استخرج من أول { لآخر }
     start = text.find('{')
     end = text.rfind('}')
     if start != -1 and end != -1:
@@ -15,7 +26,29 @@ def parse_llm_json(text):
             return json.loads(text[start:end+1])
         except:
             pass
+
+    # محاولة 3: JSON مقطوع — أكمله
+    if start != -1:
+        partial = text[start:]
+
+        # أغلق أي أقواس مفتوحة
+        open_braces = partial.count('{') - partial.count('}')
+        open_brackets = partial.count('[') - partial.count(']')
+
+        # أغلق آخر string مفتوح
+        if partial.count('"') % 2 != 0:
+            partial += '"'
+
+        partial += ']' * open_brackets
+        partial += '}' * open_braces
+
+        try:
+            return json.loads(partial)
+        except:
+            pass
+
     return {}
+
 
 
 class RealityCompiler:
@@ -83,7 +116,7 @@ Return JSON with ALL these keys:
   "competitive_edge": "why we win"
 }}"""
 
-        raw = await self.llm.complete(system_prompt, user_message)
+        raw = await self.llm.complete(system_prompt, user_message, temperature=0.7, max_tokens=4000)
         parsed = parse_llm_json(raw)
 
         return {
@@ -127,3 +160,4 @@ Return JSON with ALL these keys:
                 f.write(f"Follow-up:\n{email.get('follow_up', '')}\n")
 
         return output_dir
+
