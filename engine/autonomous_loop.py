@@ -242,7 +242,7 @@ class AutonomousLoop:
     async def run_one_cycle(self, company_profile: dict) -> dict:
         self.cycle_count += 1
 
-        print(f"\n{'='*50}")
+        print(f"\n{'='*50}", flush=True)
         print(f" SVOS Autonomous Cycle #{self.cycle_count}")
         print(f" {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         print(f"{'='*50}")
@@ -262,7 +262,8 @@ class AutonomousLoop:
 
         print(" [4/5] Executing...", end=" ", flush=True)
         execution = await self.execute_action(decision, company_profile)
-        print(f"{'✅' if execution.get('success') else '⚠️'} — {execution.get('result', '?')[:60]}")
+        status = "[OK]" if execution.get('success') else "[!!]"
+        print(f"{status} -- {execution.get('result', '?')[:60]}")
 
         print(" [5/5] Report...", end=" ", flush=True)
         report = await self.daily_report(briefing, market, decision, execution)
