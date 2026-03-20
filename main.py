@@ -550,6 +550,116 @@ async def wizard_chat(req: WizardChatRequest):
     return {'agent': role, 'reply': out}
 
 
+# =====================================================================
+# REAL EXECUTION ENDPOINTS — التنفيذ الحقيقي
+# =====================================================================
+from tools.landing_page_tool import LandingPageTool
+from tools.email_tool import EmailTool
+
+_landing_tool = LandingPageTool()
+_email_tool = EmailTool()
+
+
+@app.post('/execute/landing-page')
+async def execute_landing_page(body: dict):
+    """يولّد صفحة هبوط حقيقية من وصف النشاط."""
+    company = body.get("company_name", "شركتي")
+    headline = body.get("headline", "")
+    subheadline = body.get("subheadline", "")
+    benefits = body.get("benefits", [])
+    cta = body.get("cta_text", "ابدأ الآن")
+    lang = body.get("lang", "ar")
+
+    if not headline:
+        raise HTTPException(400, "headline is required")
+
+    result = await _landing_tool.execute(
+        company_name=company,
+        headline=headline,
+        subheadline=subheadline,
+        benefits=benefits,
+        cta_text=cta,
+        lang=lang,
+    )
+    return result
+
+
+@app.get('/execute/pages')
+async def list_landing_pages():
+    """قائمة كل الصفحات المولّدة."""
+    return {"pages": _landing_tool.list_pages()}
+
+
+@app.get('/pages/{page_id}')
+async def serve_landing_page(page_id: str):
+    """يعرض صفحة هبوط مولّدة."""
+    path = _landing_tool.get_page_path(page_id)
+    if not path:
+        raise HTTPException(404, "Page not found")
+    return FileResponse(str(path), media_type="text/html")
+
+
+@app.post('/execute/send-email')
+async def execute_send_email(body: dict):
+    """يرسل إيميل حقيقي."""
+    to = body.get("to", "")
+    subject = body.get("subject", "")
+    email_body = body.get("body", "")
+    html = body.get("html")
+
+    if not to or not subject:
+        raise HTTPException(400, "to and subject are required")
+
+    result = await _email_tool.execute(to=to, subject=subject, body=email_body, html=html)
+    return result
+
+
+@app.post('/execute/full-package')
+async def execute_full_package(body: dict):
+    """
+    التنفيذ الكامل: فكرة → PRD + صفحة هبوط + إيميل مبيعات.
+    هذا هو قلب SVOS — من الفكرة للتنفيذ بأمر واحد.
+    """
+    idea = body.get("idea", "")
+    if not idea:
+        raise HTTPException(400, "idea is required")
+
+    # Step 1: Reality Compiler — يولّد الحزمة
+    from engines.reality_compiler import RealityCompiler
+
+    compiler = RealityCompiler()
+    package = await compiler.compile(idea)
+
+    # Step 2: Landing Page — ينشئ صفحة حقيقية
+    lp = package.get("landing_page", {})
+    page_result = {"success": False, "note": "no landing page data"}
+    if lp and lp.get("headline"):
+        page_result = await _landing_tool.execute(
+            company_name=package.get("prd", {}).get("product_name", "SVOS Product"),
+            headline=lp.get("headline", ""),
+            subheadline=lp.get("subheadline", ""),
+            benefits=lp.get("benefits", []),
+            cta_text=lp.get("cta_button", "ابدأ الآن"),
+        )
+
+    # Step 3: Save all assets
+    compiler_save = await compiler.compile_and_save(idea)
+
+    return {
+        "success": True,
+        "idea": idea,
+        "summary": package.get("idea_summary", ""),
+        "prd": package.get("prd", {}),
+        "landing_page": page_result,
+        "sales_email": package.get("sales_email", {}),
+        "launch_plan": package.get("launch_plan", {}),
+        "budget_estimate": package.get("budget_estimate", {}),
+        "risks": package.get("risks", []),
+        "competitive_edge": package.get("competitive_edge", ""),
+        "saved_to": compiler_save,
+    }
+
+
 # static web app
 if Path('web').exists():
     app.mount('/web', StaticFiles(directory='web'), name='web')
