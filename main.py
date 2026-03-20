@@ -840,6 +840,107 @@ async def factory_log():
     return {"log": _factory.get_production_log()}
 
 
+# =====================================================================
+# REVENUE ENGINE ENDPOINTS
+# =====================================================================
+from engines.revenue_engine import RevenueEngine
+
+_revenue = RevenueEngine()
+
+
+@app.post('/revenue/discover')
+async def revenue_discover(body: dict):
+    return await _revenue.discover_streams(
+        business=body.get("business", ""),
+        current_revenue=body.get("current_revenue", ""),
+        goals=body.get("goals", []),
+    )
+
+
+@app.post('/revenue/evaluate')
+async def revenue_evaluate(body: dict):
+    return await _revenue.evaluate_stream(
+        stream_name=body.get("stream_name", ""),
+        business_context=body.get("business", ""),
+    )
+
+
+@app.post('/revenue/pricing')
+async def revenue_pricing(body: dict):
+    return await _revenue.generate_pricing(
+        product=body.get("product", ""),
+        target_market=body.get("target_market", ""),
+        competitors=body.get("competitors", ""),
+    )
+
+
+@app.post('/revenue/forecast')
+async def revenue_forecast(body: dict):
+    return await _revenue.forecast(
+        business=body.get("business", ""),
+        streams=body.get("streams", []),
+        months=body.get("months", 12),
+    )
+
+
+@app.get('/revenue/summary')
+async def revenue_summary():
+    return _revenue.get_summary()
+
+
+# =====================================================================
+# COMPANY DNA ENDPOINTS
+# =====================================================================
+from engines.company_dna import CompanyDNA
+
+_dna = CompanyDNA()
+
+
+@app.post('/dna/initialize')
+async def dna_init(body: dict):
+    return _dna.initialize(
+        name=body.get("name", ""),
+        mission=body.get("mission", ""),
+        vision=body.get("vision", ""),
+        values=body.get("values", []),
+        personality=body.get("personality"),
+    )
+
+
+@app.get('/dna/profile')
+async def dna_profile():
+    return _dna.get_dna()
+
+
+@app.post('/dna/record-decision')
+async def dna_record_decision(body: dict):
+    _dna.record_decision(
+        decision=body.get("decision", ""),
+        outcome=body.get("outcome", ""),
+        success=body.get("success", False),
+    )
+    return {"recorded": True, "success_rate": _dna.get_success_rate()}
+
+
+@app.post('/dna/record-lesson')
+async def dna_record_lesson(body: dict):
+    _dna.record_lesson(
+        lesson=body.get("lesson", ""),
+        category=body.get("category", "general"),
+    )
+    return {"recorded": True}
+
+
+@app.post('/dna/evolve')
+async def dna_evolve():
+    return await _dna.evolve()
+
+
+@app.post('/dna/brand-voice')
+async def dna_brand_voice():
+    return await _dna.generate_brand_voice()
+
+
 # static web app
 if Path('web').exists():
     app.mount('/web', StaticFiles(directory='web'), name='web')
