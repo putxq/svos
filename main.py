@@ -551,6 +551,62 @@ async def wizard_chat(req: WizardChatRequest):
 
 
 # =====================================================================
+# SCHEDULER ENDPOINTS — الحلقة المستقلة
+# =====================================================================
+from engine.scheduler import SVOSScheduler
+
+_scheduler = SVOSScheduler()
+
+
+@app.post('/scheduler/start')
+async def scheduler_start(body: dict):
+    """يبدأ الحلقة المستقلة."""
+    company = {
+        "description": body.get("description", "Digital business"),
+        "goal": body.get("goal", "Growth"),
+        "budget": body.get("budget", "$5,000"),
+    }
+    email = body.get("founder_email", "")
+    hours = float(body.get("interval_hours", 6))
+
+    result = _scheduler.start(company, email, hours)
+    return result
+
+
+@app.post('/scheduler/stop')
+async def scheduler_stop():
+    """يوقف الحلقة المستقلة."""
+    return _scheduler.stop()
+
+
+@app.get('/scheduler/status')
+async def scheduler_status():
+    """حالة المجدوِل."""
+    return _scheduler.get_status()
+
+
+@app.post('/scheduler/run-once')
+async def scheduler_run_once(body: dict):
+    """يشغّل دورة واحدة فقط (للاختبار)."""
+    company = {
+        "description": body.get("description", "Digital business"),
+        "goal": body.get("goal", "Growth"),
+        "budget": body.get("budget", "$5,000"),
+    }
+
+    _scheduler.configure(company)
+    report = await _scheduler._run_cycle_safe()
+
+    # Send email if provided
+    email = body.get("founder_email", "")
+    if email:
+        _scheduler.founder_email = email
+        await _scheduler._send_report_email(report)
+
+    return {"success": True, "report": report}
+
+
+# =====================================================================
 # REAL EXECUTION ENDPOINTS — التنفيذ الحقيقي
 # =====================================================================
 from tools.landing_page_tool import LandingPageTool
