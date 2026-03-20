@@ -1,6 +1,5 @@
 ﻿import json
 import re
-
 from core.llm_provider import LLMProvider
 
 
@@ -27,7 +26,40 @@ class TimeEngine:
 
     async def simulate(self, decision: str, context: dict, timeframes: list = None) -> dict:
         """
-        يحاكي ماذا يحدث إذا نفذنا قرار معين.
+        يحاكي ماذا يحدث إذا نفذنا قرار معين
+        يسأل Claude:
+        system_prompt:
+        "You are a strategic scenario planner with deep business experience.
+        Given a business decision and context, simulate what happens at each timeframe.
+        Be realistic and specific - include both opportunities and risks.
+        Respond in the same language as the decision.
+        Return ONLY JSON, no markdown."
+
+        user_message:
+        "Decision: {decision}
+        Context: {json.dumps(context)}
+        Simulate outcomes for these timeframes: {timeframes}
+
+        Return JSON:
+        {
+          'decision': str,
+          'scenarios': {
+            '7_days': {
+              'status': str,
+              'achievements': [str],
+              'challenges': [str],
+              'confidence': float 0-1,
+              'critical_action': str
+            },
+            '30_days': { same structure },
+            '90_days': { same structure }
+          },
+          'best_case': str,
+          'worst_case': str,
+          'most_likely': str,
+          'kill_signals': [str],  // signs we should stop
+          'acceleration_signals': [str] // signs we should go faster
+        }"
         """
         if timeframes is None:
             timeframes = ["7 days", "30 days", "90 days"]
@@ -65,6 +97,10 @@ class TimeEngine:
     async def should_proceed(self, decision: str, context: dict) -> dict:
         """
         سؤال بسيط: هل نمشي أو نتوقف؟
+        يستخدم simulate ثم يحسب:
+        - إذا أغلب السيناريوهات إيجابية → proceed
+        - إذا أغلبها سلبية → pause
+        - إذا فيه kill signals → stop
         """
         sim = await self.simulate(decision, context)
 
