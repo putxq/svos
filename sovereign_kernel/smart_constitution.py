@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from core.config import settings
 from core.llm_provider import LLMProvider
+from core.json_parser import parse_llm_json
 
 try:
     import yaml  # type: ignore
@@ -16,15 +17,6 @@ except Exception:  # pragma: no cover
     yaml = None
 
 
-
-
-def clean_json_response(text: str) -> str:
-    # ???? markdown code fences
-    text = text.strip()
-    text = re.sub(r'^```json\s*', '', text)
-    text = re.sub(r'^```\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
-    return text.strip()
 
 
 class ConstitutionVerdict(BaseModel):
@@ -129,7 +121,7 @@ class SmartConstitution:
         )
 
         try:
-            parsed = json.loads(clean_json_response(raw))
+            parsed = parse_llm_json(raw)
         except Exception:
             # Graceful fallback when model returns non-JSON
             parsed = {

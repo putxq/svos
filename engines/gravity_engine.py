@@ -4,28 +4,7 @@ import json
 import re
 from typing import Any
 
-
-def parse_llm_json(text: str) -> dict:
-    """???? ?? Claude ??????? JSON"""
-    text = (text or "").strip()
-    text = re.sub(r'^```json\s*', '', text)
-    text = re.sub(r'^```\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
-    text = text.strip()
-
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        # ???? ????? ??? { ???? }
-        start = text.find('{')
-        end = text.rfind('}')
-        if start != -1 and end != -1:
-            try:
-                return json.loads(text[start:end+1])
-            except Exception:
-                pass
-    return {}
-
+from core.json_parser import parse_llm_json, extract_field
 
 
 class GravityEngine:
@@ -48,17 +27,8 @@ class GravityEngine:
 
     @staticmethod
     def _safe_json(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
-        cleaned = GravityEngine._clean_json(text)
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            m = re.search(r"\{[\s\S]*\}", cleaned)
-            if m:
-                try:
-                    return json.loads(m.group(0))
-                except Exception:
-                    pass
-            return fallback
+        parsed = parse_llm_json(text)
+        return parsed if isinstance(parsed, dict) and parsed else fallback
 
     async def scan_market(self, industry: str, region: str, service: str) -> dict:
         """
@@ -124,11 +94,12 @@ class GravityEngine:
         parsed = parse_llm_json(raw_response)
 
         # ?????? ????? ? ?? ???? ?? ????? ??????
-        opportunities = (
-            parsed.get("opportunities")
-            or parsed.get("analysis", {}).get("opportunities")
-            or parsed.get("market_opportunities")
-            or []
+        opportunities = extract_field(
+            parsed,
+            "opportunities",
+            "analysis.opportunities",
+            "market_opportunities",
+            default=[],
         )
 
         # ???? ??? ?? ????
@@ -151,28 +122,32 @@ class GravityEngine:
             )
 
         # ??? ????? ????? ??????
-        competition = (
-            parsed.get("competition_level")
-            or parsed.get("analysis", {}).get("competition_level")
-            or parsed.get("competition", {}).get("level")
-            or "unknown"
+        competition = extract_field(
+            parsed,
+            "competition_level",
+            "analysis.competition_level",
+            "competition.level",
+            default="unknown",
         )
-        entry_strategy = (
-            parsed.get("entry_strategy")
-            or parsed.get("recommended_entry_strategy")
-            or parsed.get("analysis", {}).get("entry_strategy")
-            or ""
+        entry_strategy = extract_field(
+            parsed,
+            "entry_strategy",
+            "recommended_entry_strategy",
+            "analysis.entry_strategy",
+            default="",
         )
-        time_to_revenue = (
-            parsed.get("time_to_revenue")
-            or parsed.get("time_to_first_revenue")
-            or parsed.get("analysis", {}).get("time_to_revenue")
-            or ""
+        time_to_revenue = extract_field(
+            parsed,
+            "time_to_revenue",
+            "time_to_first_revenue",
+            "analysis.time_to_revenue",
+            default="",
         )
-        pain_points = (
-            parsed.get("pain_points")
-            or parsed.get("analysis", {}).get("pain_points")
-            or []
+        pain_points = extract_field(
+            parsed,
+            "pain_points",
+            "analysis.pain_points",
+            default=[],
         )
 
         return {

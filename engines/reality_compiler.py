@@ -1,54 +1,6 @@
 ﻿import json
-import re
 from core.llm_provider import LLMProvider
-
-
-def parse_llm_json(text):
-    import re, json
-
-    text = text.strip()
-    text = re.sub(r'^```json\s*', '', text)
-    text = re.sub(r'^```\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
-    text = text.strip()
-
-    # محاولة 1: JSON كامل
-    try:
-        return json.loads(text)
-    except:
-        pass
-
-    # محاولة 2: استخرج من أول { لآخر }
-    start = text.find('{')
-    end = text.rfind('}')
-    if start != -1 and end != -1:
-        try:
-            return json.loads(text[start:end+1])
-        except:
-            pass
-
-    # محاولة 3: JSON مقطوع — أكمله
-    if start != -1:
-        partial = text[start:]
-
-        # أغلق أي أقواس مفتوحة
-        open_braces = partial.count('{') - partial.count('}')
-        open_brackets = partial.count('[') - partial.count(']')
-
-        # أغلق آخر string مفتوح
-        if partial.count('"') % 2 != 0:
-            partial += '"'
-
-        partial += ']' * open_brackets
-        partial += '}' * open_braces
-
-        try:
-            return json.loads(partial)
-        except:
-            pass
-
-    return {}
-
+from core.json_parser import parse_llm_json, extract_field
 
 
 class RealityCompiler:
@@ -121,14 +73,14 @@ Return JSON with ALL these keys:
 
         return {
             "idea": idea,
-            "prd": parsed.get("prd", {}),
-            "landing_page": parsed.get("landing_page", {}),
-            "sales_email": parsed.get("sales_email", {}),
-            "launch_plan": parsed.get("launch_plan", {}),
-            "budget_estimate": parsed.get("budget_estimate", {}),
-            "risks": parsed.get("risks", []),
-            "competitive_edge": parsed.get("competitive_edge", ""),
-            "idea_summary": parsed.get("idea_summary", idea),
+            "prd": extract_field(parsed, "prd", default={}),
+            "landing_page": extract_field(parsed, "landing_page", default={}),
+            "sales_email": extract_field(parsed, "sales_email", default={}),
+            "launch_plan": extract_field(parsed, "launch_plan", default={}),
+            "budget_estimate": extract_field(parsed, "budget_estimate", default={}),
+            "risks": extract_field(parsed, "risks", default=[]),
+            "competitive_edge": extract_field(parsed, "competitive_edge", default=""),
+            "idea_summary": extract_field(parsed, "idea_summary", default=idea),
         }
 
     async def compile_and_save(self, idea: str, output_dir: str = "workspace/compiled", context: dict = None) -> str:

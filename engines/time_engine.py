@@ -1,21 +1,6 @@
 ﻿import json
-import re
 from core.llm_provider import LLMProvider
-
-
-def parse_llm_json(text):
-    text = text.strip()
-    text = re.sub(r'^```json\s*', '', text)
-    text = re.sub(r'^```\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
-    start = text.find('{')
-    end = text.rfind('}')
-    if start != -1 and end != -1:
-        try:
-            return json.loads(text[start:end+1])
-        except:
-            pass
-    return {}
+from core.json_parser import parse_llm_json, extract_field
 
 
 class TimeEngine:
@@ -85,13 +70,13 @@ class TimeEngine:
         parsed = parse_llm_json(raw)
 
         return {
-            "decision": parsed.get("decision", decision),
-            "scenarios": parsed.get("scenarios", {}),
-            "best_case": parsed.get("best_case", ""),
-            "worst_case": parsed.get("worst_case", ""),
-            "most_likely": parsed.get("most_likely", ""),
-            "kill_signals": parsed.get("kill_signals", []),
-            "acceleration_signals": parsed.get("acceleration_signals", []),
+            "decision": extract_field(parsed, "decision", default=decision),
+            "scenarios": extract_field(parsed, "scenarios", default={}),
+            "best_case": extract_field(parsed, "best_case", default=""),
+            "worst_case": extract_field(parsed, "worst_case", default=""),
+            "most_likely": extract_field(parsed, "most_likely", default=""),
+            "kill_signals": extract_field(parsed, "kill_signals", default=[]),
+            "acceleration_signals": extract_field(parsed, "acceleration_signals", default=[]),
         }
 
     async def should_proceed(self, decision: str, context: dict) -> dict:
