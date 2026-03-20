@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
@@ -16,11 +16,9 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Tajawal,system-ui;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
-/* Layout */
 .app{display:flex;min-height:100vh}
 .sidebar{width:240px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:100}
 .main{flex:1;margin-right:240px;padding:24px;min-height:100vh}
-/* Sidebar */
 .logo{padding:20px;text-align:center;border-bottom:1px solid var(--border)}
 .logo h1{font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .logo p{font-size:11px;color:var(--muted);margin-top:4px}
@@ -32,19 +30,15 @@ body{font-family:Tajawal,system-ui;background:var(--bg);color:var(--text);min-he
 .sidebar-footer{padding:16px;border-top:1px solid var(--border);text-align:center}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);display:inline-block;margin-left:6px;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-/* Views */
 .view{display:none}.view.active{display:block}
-/* Cards */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;transition:.2s}
 .card:hover{border-color:rgba(0,212,255,.3)}
 .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .card-title{font-size:16px;font-weight:700}
-/* Stats Row */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;text-align:center}
 .stat-value{font-size:32px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .stat-label{font-size:13px;color:var(--muted);margin-top:4px}
-/* Agent Grid */
 .agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px}
 .agent-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;cursor:pointer;transition:.3s}
 .agent-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 30px rgba(0,212,255,.1)}
@@ -65,29 +59,35 @@ body{font-family:Tajawal,system-ui;background:var(--bg);color:var(--text);min-he
 .form-input,.form-select,.form-textarea{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:inherit;font-size:14px;transition:.2s}
 .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
 .form-textarea{resize:vertical;min-height:80px}
-/* Buttons */
 .btn{padding:12px 24px;border:none;border-radius:var(--radius);font:inherit;font-weight:600;cursor:pointer;transition:.2s;font-size:14px}
 .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
 .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
 .btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
 .btn-secondary:hover{border-color:var(--accent)}
 .btn-success{background:var(--accent3);color:#fff}
-.btn-danger{background:var(--danger);color:#fff}
 .btn-sm{padding:8px 16px;font-size:13px}
 .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:20px}
-/* Chat */
+/* Chat — Separate per agent */
 .chat-container{display:flex;flex-direction:column;height:calc(100vh - 120px);max-width:900px;margin:0 auto}
-.chat-agents{display:flex;gap:8px;padding:12px 0;overflow-x:auto;margin-bottom:12px}
-.chat-agent-btn{padding:8px 16px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;font:inherit;font-size:13px;transition:.2s}
-.chat-agent-btn.active{background:rgba(0,212,255,.15);color:var(--accent);border-color:var(--accent)}
+.chat-tabs{display:flex;gap:6px;padding:12px 0;overflow-x:auto;margin-bottom:12px;flex-wrap:nowrap}
+.chat-tab{padding:8px 16px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;font:inherit;font-size:13px;transition:.2s;display:flex;align-items:center;gap:6px}
+.chat-tab:hover{border-color:var(--accent);color:var(--text)}
+.chat-tab.active{background:rgba(0,212,255,.15);color:var(--accent);border-color:var(--accent)}
+.chat-tab .unread{width:8px;height:8px;border-radius:50%;background:var(--accent);display:none}
+.chat-tab.has-unread .unread{display:inline-block}
 .chat-messages{flex:1;overflow-y:auto;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius2)}
+.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:12px}
+.chat-empty-icon{font-size:48px;opacity:.5}
+.chat-empty-text{font-size:14px;text-align:center;line-height:1.8}
 .chat-msg{max-width:80%;padding:12px 16px;border-radius:var(--radius);margin-bottom:12px;font-size:14px;line-height:1.6;white-space:pre-wrap}
-.chat-msg.user{margin-right:auto;background:var(--bg4);margin-left:auto}
-.chat-msg.agent{margin-left:auto;margin-right:0;background:var(--bg3);border:1px solid var(--border)}
-.chat-msg .msg-header{font-size:11px;color:var(--accent);margin-bottom:4px;font-weight:600}
+.chat-msg.user{margin-left:auto;background:var(--bg4)}
+.chat-msg.agent{margin-right:auto;background:var(--bg3);border:1px solid var(--border)}
+.chat-msg .msg-header{font-size:11px;color:var(--accent);margin-bottom:4px;font-weight:600;display:flex;align-items:center;gap:6px}
+.chat-msg .msg-time{font-size:10px;color:var(--muted);margin-top:4px;text-align:left}
 .chat-input-row{display:flex;gap:10px;margin-top:12px}
 .chat-input-row input{flex:1}
-/* Results Card */
+.chat-typing{font-size:12px;color:var(--accent);padding:4px 0;height:20px}
+/* Result Cards */
 .result-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px;margin-top:20px}
 .result-header{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .badge{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600}
@@ -95,171 +95,126 @@ body{font-family:Tajawal,system-ui;background:var(--bg);color:var(--text);min-he
 .badge-green{background:rgba(16,185,129,.15);color:var(--accent3)}
 .badge-red{background:rgba(239,68,68,.15);color:var(--danger)}
 .badge-yellow{background:rgba(245,158,11,.15);color:var(--warn)}
-.result-body{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:400px;overflow-y:auto}
+/* Opportunity Cards */
+.opp-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:.2s}
+.opp-card:hover{border-color:rgba(0,212,255,.3)}
+.opp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.opp-title{font-weight:700;font-size:14px}
+.opp-conf{font-size:24px;font-weight:800}
+.opp-conf.high{color:var(--accent3)}.opp-conf.mid{color:var(--warn)}.opp-conf.low{color:var(--danger)}
+.opp-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+.opp-meta{display:flex;gap:8px;flex-wrap:wrap}
+.opp-tag{font-size:11px;padding:4px 10px;border-radius:12px;background:var(--bg3);color:var(--muted)}
+/* Plan Output */
+.plan-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
+.plan-step{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.plan-step:last-child{border-bottom:none}
+.plan-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.plan-text{font-size:14px;line-height:1.6;padding-top:3px}
 /* Loading */
 .loading{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,26,.8);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
+.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,26,.85);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
 .loading-text{color:var(--accent);font-size:16px;font-weight:600}
-/* Page Header */
 .page-header{margin-bottom:24px}
 .page-header h2{font-size:24px;font-weight:800}
 .page-header p{color:var(--muted);margin-top:4px;font-size:14px}
-/* Settings */
 .setting-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border)}
 .setting-label{font-weight:600}
 .setting-desc{font-size:13px;color:var(--muted);margin-top:2px}
-/* Responsive */
 @media(max-width:768px){
  .sidebar{width:60px}.sidebar .nav-text,.sidebar .logo p,.sidebar-footer span{display:none}
  .logo h1{font-size:14px}.main{margin-right:60px;padding:16px}
  .agents-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}
+ .chat-tabs{flex-wrap:wrap}
 }
-/* Animations */
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .view.active{animation:fadeIn .3s ease}
 </style>
 </head>
 <body>
 <div class="app">
-<!-- Sidebar -->
 <nav class="sidebar">
-<div class="logo">
-<h1>SVOS</h1>
-<p>Sovereign Ventures OS</p>
-</div>
+<div class="logo"><h1>SVOS</h1><p>Sovereign Ventures OS</p></div>
 <div class="nav">
-<div class="nav-item active" onclick="showView('overview')">
-<span class="nav-icon">📊</span><span class="nav-text">نظرة عامة</span>
+<div class="nav-item active" onclick="showView('overview')"><span class="nav-icon">📊</span><span class="nav-text">نظرة عامة</span></div>
+<div class="nav-item" onclick="showView('agents')"><span class="nav-icon">🤖</span><span class="nav-text">الوكلاء</span></div>
+<div class="nav-item" onclick="showView('create')"><span class="nav-icon">🚀</span><span class="nav-text">إنشاء شركة</span></div>
+<div class="nav-item" onclick="showView('chat')"><span class="nav-icon">💬</span><span class="nav-text">المحادثات</span></div>
+<div class="nav-item" onclick="showView('scan')"><span class="nav-icon">🔍</span><span class="nav-text">مسح السوق</span></div>
+<div class="nav-item" onclick="showView('settings')"><span class="nav-icon">⚙️</span><span class="nav-text">الإعدادات</span></div>
 </div>
-<div class="nav-item" onclick="showView('agents')">
-<span class="nav-icon">🤖</span><span class="nav-text">الوكلاء</span>
-</div>
-<div class="nav-item" onclick="showView('create')">
-<span class="nav-icon">🚀</span><span class="nav-text">إنشاء شركة</span>
-</div>
-<div class="nav-item" onclick="showView('chat')">
-<span class="nav-icon">💬</span><span class="nav-text">المحادثة</span>
-</div>
-<div class="nav-item" onclick="showView('scan')">
-<span class="nav-icon">🔍</span><span class="nav-text">مسح السوق</span>
-</div>
-<div class="nav-item" onclick="showView('settings')">
-<span class="nav-icon">⚙️</span><span class="nav-text">الإعدادات</span>
-</div>
-</div>
-<div class="sidebar-footer">
-<span class="status-dot"></span>
-<span style="font-size:12px;color:var(--accent3)">النظام يعمل</span>
-</div>
+<div class="sidebar-footer"><span class="status-dot"></span><span style="font-size:12px;color:var(--accent3)">النظام يعمل</span></div>
 </nav>
-<!-- Main Content -->
 <div class="main">
 <!-- Overview -->
 <div class="view active" id="view-overview">
-<div class="page-header">
-<h2>🏢 لوحة التحكم التنفيذية</h2>
-<p>SVOS — نظام تشغيل الأعمال السيادي</p>
-</div>
-<div class="stats" id="statsRow">
+<div class="page-header"><h2>🏢 لوحة التحكم التنفيذية</h2><p>SVOS — نظام تشغيل الأعمال السيادي</p></div>
+<div class="stats">
 <div class="stat-card"><div class="stat-value" id="stat-agents">9</div><div class="stat-label">وكيل تنفيذي</div></div>
 <div class="stat-card"><div class="stat-value" id="stat-status">●</div><div class="stat-label">حالة النظام</div></div>
 <div class="stat-card"><div class="stat-value" id="stat-provider">—</div><div class="stat-label">نموذج الذكاء</div></div>
 <div class="stat-card"><div class="stat-value" id="stat-version">v1.0</div><div class="stat-label">الإصدار</div></div>
 </div>
-<div class="card">
-<div class="card-header"><span class="card-title">الوكلاء التنفيذيون</span></div>
-<div class="agents-grid" id="overviewAgents"></div>
-</div>
+<div class="card"><div class="card-header"><span class="card-title">الوكلاء التنفيذيون</span></div><div class="agents-grid" id="overviewAgents"></div></div>
 </div>
 <!-- Agents -->
 <div class="view" id="view-agents">
-<div class="page-header">
-<h2>🤖 الوكلاء التنفيذيون</h2>
-<p>جميع الوكلاء وحالتهم ومهامهم</p>
-</div>
+<div class="page-header"><h2>🤖 الوكلاء التنفيذيون</h2><p>جميع الوكلاء — انقر على أي وكيل للمحادثة</p></div>
 <div class="agents-grid" id="agentsGrid"></div>
 </div>
-<!-- Create Company -->
+<!-- Create -->
 <div class="view" id="view-create">
-<div class="page-header">
-<h2>🚀 إنشاء شركة رقمية</h2>
-<p>أدخل بيانات شركتك وسيقوم الفريق التنفيذي بوضع الخطة</p>
+<div class="page-header"><h2>🚀 إنشاء شركة رقمية</h2><p>الفريق التنفيذي يضع الخطة — أنت تقرر</p></div>
+<div class="wizard-container"><div class="wizard-steps" id="wizardSteps"></div><div id="wizardContent"></div><div class="actions" id="wizardActions"></div><div id="wizardResult"></div></div>
 </div>
-<div class="wizard-container">
-<div class="wizard-steps" id="wizardSteps"></div>
-<div id="wizardContent"></div>
-<div class="actions" id="wizardActions"></div>
-<div id="wizardResult"></div>
-</div>
-</div>
-<!-- Chat -->
+<!-- Chat — Separate per agent -->
 <div class="view" id="view-chat">
-<div class="page-header">
-<h2>💬 محادثة الفريق التنفيذي</h2>
-<p>تحدث مباشرة مع أي وكيل</p>
-</div>
+<div class="page-header"><h2>💬 المحادثات</h2><p>كل وكيل في محادثة مستقلة — اختر وكيلاً وابدأ</p></div>
 <div class="chat-container">
-<div class="chat-agents" id="chatAgents"></div>
-<div class="chat-messages" id="chatMessages"></div>
+<div class="chat-tabs" id="chatTabs"></div>
+<div class="chat-messages" id="chatMessages">
+<div class="chat-empty" id="chatEmpty">
+<div class="chat-empty-icon">💬</div>
+<div class="chat-empty-text">اختر وكيلاً من الأعلى وابدأ المحادثة<br>كل وكيل عنده محادثة خاصة ومستقلة</div>
+</div>
+</div>
+<div class="chat-typing" id="chatTyping"></div>
 <div class="chat-input-row">
-<input class="form-input" id="chatInput" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendChat()"/>
+<input class="form-input" id="chatInput" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter'&&!event.shiftKey)sendChat()"/>
 <button class="btn btn-primary" onclick="sendChat()">إرسال</button>
 </div>
 </div>
 </div>
-<!-- Market Scan -->
+<!-- Scan -->
 <div class="view" id="view-scan">
-<div class="page-header">
-<h2>🔍 مسح السوق</h2>
-<p>اكتشف الفرص الحقيقية في أي سوق</p>
-</div>
+<div class="page-header"><h2>🔍 مسح السوق</h2><p>محرك الجاذبية يكتشف الفرص الحقيقية</p></div>
 <div class="wizard-container">
 <div class="card">
-<div class="form-group">
-<label class="form-label">وصف النشاط أو الفكرة</label>
-<textarea class="form-textarea" id="scanDesc" rows="3" placeholder="مثال: تسويق رقمي للمطاعم في السعودية"></textarea>
-</div>
-<div class="actions">
-<button class="btn btn-primary" onclick="runScan()" id="scanBtn">ابدأ المسح</button>
-</div>
+<div class="form-group"><label class="form-label">وصف النشاط أو الفكرة</label><textarea class="form-textarea" id="scanDesc" rows="3" placeholder="مثال: تسويق رقمي للمطاعم في السعودية"></textarea></div>
+<div class="actions"><button class="btn btn-primary" onclick="runScan()" id="scanBtn">🔍 ابدأ المسح</button></div>
 </div>
 <div id="scanResult"></div>
 </div>
 </div>
 <!-- Settings -->
 <div class="view" id="view-settings">
-<div class="page-header">
-<h2>⚙️ الإعدادات</h2>
-<p>إعدادات النظام والاتصال</p>
-</div>
+<div class="page-header"><h2>⚙️ الإعدادات</h2><p>إعدادات النظام والاتصال</p></div>
 <div class="card">
-<div class="setting-row">
-<div><div class="setting-label">عنوان الخادم (API)</div><div class="setting-desc" id="apiUrlDisplay">—</div></div>
-<button class="btn btn-sm btn-secondary" onclick="testConnection()">اختبر الاتصال</button>
-</div>
-<div class="setting-row">
-<div><div class="setting-label">نموذج الذكاء الاصطناعي</div><div class="setting-desc" id="providerDisplay">—</div></div>
-</div>
-<div class="setting-row">
-<div><div class="setting-label">حالة النظام</div><div class="setting-desc" id="systemStatus">—</div></div>
-<button class="btn btn-sm btn-secondary" onclick="loadOverview()">تحديث</button>
+<div class="setting-row"><div><div class="setting-label">عنوان الخادم</div><div class="setting-desc" id="apiUrlDisplay">—</div></div><button class="btn btn-sm btn-secondary" onclick="testConnection()">اختبر الاتصال</button></div>
+<div class="setting-row"><div><div class="setting-label">نموذج الذكاء الاصطناعي</div><div class="setting-desc" id="providerDisplay">—</div></div></div>
+<div class="setting-row"><div><div class="setting-label">حالة النظام</div><div class="setting-desc" id="systemStatus">—</div></div><button class="btn btn-sm btn-secondary" onclick="loadOverview()">تحديث</button></div>
 </div>
 </div>
 </div>
 </div>
-</div>
-<!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay" style="display:none">
 <div class="loading" style="width:40px;height:40px;border-width:3px"></div>
 <div class="loading-text" id="loadingText">جاري التحميل...</div>
 </div>
 <script>
-// =====================================================================
-// SVOS Dashboard — JavaScript
-// =====================================================================
 const API = window.location.origin;
-const AGENTS = [
+const AGENTS=[
 {id:'ceo',name:'CEO',nameAr:'الرئيس التنفيذي',role:'Chief Executive Officer',dept:'Executive',color:'#7c3aed',icon:'👑'},
 {id:'cfo',name:'CFO',nameAr:'المدير المالي',role:'Chief Financial Officer',dept:'Finance',color:'#10b981',icon:'💰'},
 {id:'cmo',name:'CMO',nameAr:'مدير التسويق',role:'Chief Marketing Officer',dept:'Marketing',color:'#f59e0b',icon:'📣'},
@@ -270,18 +225,21 @@ const AGENTS = [
 {id:'guardian',name:'Guardian',nameAr:'الحارس',role:'Constitutional Guardian',dept:'Governance',color:'#ef4444',icon:'🛡️'},
 {id:'radar',name:'Radar',nameAr:'الرادار',role:'Market Intelligence',dept:'Intelligence',color:'#06b6d4',icon:'📡'},
 ];
-let currentView = 'overview';
-let currentAgent = 'ceo';
-let wizardStep = 0;
-let wizardData = {};
+let currentView='overview', currentAgent=null, wizardStep=0, wizardData={};
+
+// ---- Chat History per Agent ----
+const chatHistories = {};
+AGENTS.forEach(a => chatHistories[a.id] = []);
 
 // ---- Navigation ----
-function showView(id) {
- document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
- document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+const NAV_IDS = ['overview','agents','create','chat','scan','settings'];
+function showView(id){
+ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+ document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
  document.getElementById('view-'+id).classList.add('active');
- document.querySelectorAll('.nav-item')[['overview','agents','create','chat','scan','settings'].indexOf(id)].classList.add('active');
- currentView = id;
+ const idx=NAV_IDS.indexOf(id);
+ if(idx>=0) document.querySelectorAll('.nav-item')[idx].classList.add('active');
+ currentView=id;
  if(id==='overview') loadOverview();
  if(id==='agents') renderAgentsPage();
  if(id==='chat') renderChatPage();
@@ -289,179 +247,193 @@ function showView(id) {
  if(id==='settings') renderSettings();
 }
 
-// ---- API Helper ----
-async function api(path, method='GET', body=null) {
- const opts = {method, headers:{'Content-Type':'application/json'}};
- if(body) opts.body = JSON.stringify(body);
- const r = await fetch(API+path, opts);
- if(!r.ok) throw new Error(`API ${r.status}`);
+// ---- API ----
+async function api(path,method='GET',body=null){
+ const opts={method,headers:{'Content-Type':'application/json'}};
+ if(body) opts.body=JSON.stringify(body);
+ const r=await fetch(API+path,opts);
+ if(!r.ok) throw new Error('API '+r.status);
  return r.json();
 }
-function showLoading(text='جاري التحميل...'){
- document.getElementById('loadingText').textContent=text;
- document.getElementById('loadingOverlay').style.display='flex';
-}
+function showLoading(t='جاري التحميل...'){document.getElementById('loadingText').textContent=t;document.getElementById('loadingOverlay').style.display='flex'}
 function hideLoading(){document.getElementById('loadingOverlay').style.display='none'}
+function timeNow(){return new Date().toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})}
 
 // ---- Overview ----
 async function loadOverview(){
  try{
-   const data = await api('/dashboard/overview');
-   document.getElementById('stat-agents').textContent = data.agents_total||9;
-   document.getElementById('stat-status').textContent = '🟢';
-   document.getElementById('stat-provider').textContent = (data.llm_provider||'—').toUpperCase();
-   document.getElementById('stat-version').textContent = data.version||'v1.0';
- }catch(e){
-   document.getElementById('stat-status').textContent = '🔴';
- }
+   const d=await api('/dashboard/overview');
+   document.getElementById('stat-agents').textContent=d.agents_total||9;
+   document.getElementById('stat-status').textContent='🟢';
+   document.getElementById('stat-provider').textContent=(d.llm_provider||'—').toUpperCase();
+   document.getElementById('stat-version').textContent=d.version||'v1.0';
+ }catch(e){document.getElementById('stat-status').textContent='🔴'}
  renderOverviewAgents();
 }
 function renderOverviewAgents(){
- const grid = document.getElementById('overviewAgents');
- grid.innerHTML = AGENTS.map(a => `
+ document.getElementById('overviewAgents').innerHTML=AGENTS.map(a=>`
  <div class="agent-card" onclick="showView('chat');selectAgent('${a.id}')">
-   <div class="agent-header">
-     <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
-     <div>
-       <div class="agent-name">${a.nameAr}</div>
-       <div class="agent-role">${a.role}</div>
-     </div>
-   </div>
-   <div class="agent-status"><span class="dot"></span> نشط ومستعد</div>
+ <div class="agent-header">
+ <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
+ <div><div class="agent-name">${a.nameAr}</div><div class="agent-role">${a.role}</div></div>
  </div>
- `).join('');
+ <div class="agent-status"><span class="dot"></span> نشط ومستعد</div>
+ </div>`).join('');
 }
 
 // ---- Agents Page ----
 function renderAgentsPage(){
- const grid = document.getElementById('agentsGrid');
- grid.innerHTML = AGENTS.map(a => `
+ document.getElementById('agentsGrid').innerHTML=AGENTS.map(a=>`
  <div class="agent-card" onclick="showView('chat');selectAgent('${a.id}')">
-   <div class="agent-header">
-     <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
-     <div>
-       <div class="agent-name">${a.nameAr} — ${a.name}</div>
-       <div class="agent-role">${a.role}</div>
-     </div>
-   </div>
-   <div style="font-size:12px;color:var(--muted);margin-top:8px">القسم: ${a.dept}</div>
-   <div class="agent-status" style="margin-top:8px"><span class="dot"></span> نشط — انقر للمحادثة</div>
+ <div class="agent-header">
+ <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
+ <div><div class="agent-name">${a.nameAr} — ${a.name}</div><div class="agent-role">${a.role}</div></div>
  </div>
- `).join('');
+ <div style="font-size:12px;color:var(--muted);margin-top:8px">القسم: ${a.dept}</div>
+ <div class="agent-status" style="margin-top:8px"><span class="dot"></span> نشط — انقر للمحادثة</div>
+ </div>`).join('');
 }
 
-// ---- Chat ----
+// ---- Chat — Separate per Agent ----
 function renderChatPage(){
- const bar = document.getElementById('chatAgents');
- bar.innerHTML = AGENTS.map(a => `<button class="chat-agent-btn ${a.id===currentAgent?'active':''}" onclick="selectAgent('${a.id}')">${a.icon} ${a.nameAr}</button>`
- ).join('');
+ const tabs=document.getElementById('chatTabs');
+ tabs.innerHTML=AGENTS.map(a=>{
+ const hasMsg=chatHistories[a.id].length>0;
+ const isActive=currentAgent===a.id;
+ return `<button class="chat-tab ${isActive?'active':''} ${hasMsg&&!isActive?'has-unread':''}" onclick="selectAgent('${a.id}')">
+ ${a.icon} ${a.nameAr} <span class="unread"></span></button>`;
+ }).join('');
+ renderChatMessages();
 }
+
 function selectAgent(id){
- currentAgent = id;
+ currentAgent=id;
  renderChatPage();
- const box = document.getElementById('chatMessages');
- if(!box.querySelector(`[data-agent="${id}"]`)){
-   const a = AGENTS.find(x=>x.id===id);
-   addChatMsg('agent', a.nameAr, `مرحباً، أنا ${a.nameAr} (${a.role}). كيف أقدر أساعدك؟`, id);
+ document.getElementById('chatInput').focus();
+}
+
+function renderChatMessages(){
+ const box=document.getElementById('chatMessages');
+ const empty=document.getElementById('chatEmpty');
+ if(!currentAgent){
+ box.innerHTML='';
+ if(empty) box.appendChild(empty);
+ empty.style.display='flex';
+ return;
  }
+ const history=chatHistories[currentAgent];
+ if(history.length===0){
+ box.innerHTML='';
+ const a=AGENTS.find(x=>x.id===currentAgent);
+ box.innerHTML=`<div class="chat-empty" style="display:flex">
+ <div class="chat-empty-icon">${a.icon}</div>
+ <div class="chat-empty-text"><strong>${a.nameAr}</strong> — ${a.role}<br>اكتب رسالتك وسيرد عليك مباشرة</div>
+ </div>`;
+ return;
+ }
+ box.innerHTML=history.map(m=>{
+ if(m.type==='user') return `<div class="chat-msg user">${m.text}<div class="msg-time">${m.time}</div></div>`;
+ return `<div class="chat-msg agent"><div class="msg-header">${m.icon} ${m.name}</div>${m.text}<div class="msg-time">${m.time}</div></div>`;
+ }).join('');
+ box.scrollTop=box.scrollHeight;
 }
-function addChatMsg(type, name, text, agentId=''){
- const box = document.getElementById('chatMessages');
- const div = document.createElement('div');
- div.className = 'chat-msg '+(type==='user'?'user':'agent');
- if(agentId) div.setAttribute('data-agent', agentId);
- div.innerHTML = (type==='agent'?`<div class="msg-header">${name}</div>`:'')+text;
- box.appendChild(div);
- box.scrollTop = box.scrollHeight;
-}
+
 async function sendChat(){
- const input = document.getElementById('chatInput');
- const text = input.value.trim();
- if(!text) return;
- addChatMsg('user','أنت',text);
- input.value = '';
- const a = AGENTS.find(x=>x.id===currentAgent);
+ const input=document.getElementById('chatInput');
+ const text=input.value.trim();
+ if(!text||!currentAgent) return;
+ chatHistories[currentAgent].push({type:'user',text,time:timeNow()});
+ renderChatMessages();
+ input.value='';
+ const a=AGENTS.find(x=>x.id===currentAgent);
+ document.getElementById('chatTyping').textContent=`${a.nameAr} يكتب...`;
  try{
-   const data = await api('/dashboard/agent-chat','POST',{
-     message:text,
-     agent_id:currentAgent,
-     company_name: wizardData.name||'شركتي',
-     description: wizardData.desc||'خدمات رقمية',
-     goal: wizardData.goal||'النمو',
-     risk: wizardData.risk||'متوسط',
-   });
-   addChatMsg('agent', data.agent_name_ar||a.nameAr, data.reply, currentAgent);
+ const data=await api('/dashboard/agent-chat','POST',{
+ message:text,agent_id:currentAgent,
+ company_name:wizardData.name||'شركتي',
+ description:wizardData.desc||'خدمات رقمية',
+ goal:wizardData.goal||'النمو',
+ risk:wizardData.risk||'متوسط',
+ });
+ chatHistories[currentAgent].push({
+ type:'agent',name:data.agent_name_ar||a.nameAr,
+ icon:a.icon,text:data.reply,time:timeNow(),
+ });
  }catch(e){
-   addChatMsg('agent','النظام','⚠️ خطأ في الاتصال: '+e.message);
+ chatHistories[currentAgent].push({
+ type:'agent',name:'النظام',icon:'⚠️',
+ text:'خطأ في الاتصال: '+e.message,time:timeNow(),
+ });
  }
+ document.getElementById('chatTyping').textContent='';
+ renderChatMessages();
 }
 
 // ---- Wizard ----
-const WIZARD_STEPS = [
- {key:'name',label:'اسم الشركة',type:'input',placeholder:'مثال: شركة زيادة للتقنية'},
- {key:'desc',label:'وصف النشاط',type:'textarea',placeholder:'ماذا تفعل شركتك؟ صف النشاط بالتفصيل'},
- {key:'goal',label:'الهدف الرئيسي',type:'select',options:['زيادة المبيعات','تقليل التكاليف','إطلاق منتج جديد','التوسع في سوق جديد']},
- {key:'risk',label:'مستوى المخاطرة',type:'select',options:['محافظ','متوسط','جريء']},
- {key:'budget',label:'الميزانية الشهرية',type:'select',options:['$1,000','$5,000','$10,000','$25,000+']},
+const WSTEPS=[
+ {key:'name',label:'اسم الشركة',type:'input',ph:'مثال: شركة زيادة للتقنية'},
+ {key:'desc',label:'وصف النشاط',type:'textarea',ph:'ماذا تفعل شركتك؟'},
+ {key:'goal',label:'الهدف الرئيسي',type:'select',opts:['زيادة المبيعات','تقليل التكاليف','إطلاق منتج جديد','التوسع في سوق جديد']},
+ {key:'risk',label:'مستوى المخاطرة',type:'select',opts:['محافظ','متوسط','جريء']},
+ {key:'budget',label:'الميزانية الشهرية',type:'select',opts:['$1,000','$5,000','$10,000','$25,000+']},
 ];
 function renderWizard(){
- const steps = document.getElementById('wizardSteps');
- steps.innerHTML = WIZARD_STEPS.map((_,i)=> `<div class="wizard-step ${i<wizardStep?'done':''} ${i===wizardStep?'current':''}"></div>`
- ).join('');
- const content = document.getElementById('wizardContent');
- if(wizardStep >= WIZARD_STEPS.length){
-   content.innerHTML = '';
-   document.getElementById('wizardActions').innerHTML = '';
-   return;
- }
- const s = WIZARD_STEPS[wizardStep];
- let field = '';
- if(s.type==='input') field=`<input class="form-input" id="wizField" placeholder="${s.placeholder}" value="${wizardData[s.key]||''}"/>`;
- if(s.type==='textarea') field=`<textarea class="form-textarea" id="wizField" rows="3" placeholder="${s.placeholder}">${wizardData[s.key]||''}</textarea>`;
- if(s.type==='select') field=`<select class="form-select" id="wizField">${s.options.map(o=>`<option ${wizardData[s.key]===o?'selected':''}>${o}</option>`).join('')}</select>`;
- content.innerHTML=`<div class="card"><div class="form-group"><label class="form-label">${s.label}</label>${field}</div></div>`;
+ document.getElementById('wizardSteps').innerHTML=WSTEPS.map((_,i)=>
+ `<div class="wizard-step ${i<wizardStep?'done':''} ${i===wizardStep?'current':''}"></div>`).join('');
+ const c=document.getElementById('wizardContent');
+ if(wizardStep>=WSTEPS.length){c.innerHTML='';document.getElementById('wizardActions').innerHTML='';return}
+ const s=WSTEPS[wizardStep];
+ let f='';
+ if(s.type==='input') f=`<input class="form-input" id="wizField" placeholder="${s.ph}" value="${wizardData[s.key]||''}"/>`;
+ if(s.type==='textarea') f=`<textarea class="form-textarea" id="wizField" rows="3" placeholder="${s.ph}">${wizardData[s.key]||''}</textarea>`;
+ if(s.type==='select') f=`<select class="form-select" id="wizField">${s.opts.map(o=>`<option ${wizardData[s.key]===o?'selected':''}>${o}</option>`).join('')}</select>`;
+ c.innerHTML=`<div class="card"><div class="form-group"><label class="form-label">${s.label}</label>${f}</div></div>`;
  document.getElementById('wizardActions').innerHTML=`
- ${wizardStep>0?'<button class="btn btn-secondary" onclick="wizardPrev()">السابق</button>':''}
- ${wizardStep<WIZARD_STEPS.length-1?'<button class="btn btn-primary" onclick="wizardNext()">التالي</button>':''}
- ${wizardStep===WIZARD_STEPS.length-1?'<button class="btn btn-success" onclick="wizardSubmit()">🚀 أنشئ شركتي</button>':''}
- `;
+ ${wizardStep>0?'<button class="btn btn-secondary" onclick="wizPrev()">السابق</button>':''}
+ ${wizardStep<WSTEPS.length-1?'<button class="btn btn-primary" onclick="wizNext()">التالي</button>':''}
+ ${wizardStep===WSTEPS.length-1?'<button class="btn btn-success" onclick="wizSubmit()">🚀 أنشئ شركتي</button>':''}`;
 }
-function wizardNext(){
- const s=WIZARD_STEPS[wizardStep];
- wizardData[s.key]=document.getElementById('wizField').value;
- if(wizardStep<WIZARD_STEPS.length-1){wizardStep++;renderWizard();}
-}
-function wizardPrev(){if(wizardStep>0){wizardStep--;renderWizard();}}
-async function wizardSubmit(){
- const s=WIZARD_STEPS[wizardStep];
- wizardData[s.key]=document.getElementById('wizField').value;
+function wizNext(){wizardData[WSTEPS[wizardStep].key]=document.getElementById('wizField').value;wizardStep++;renderWizard()}
+function wizPrev(){wizardStep--;renderWizard()}
+
+async function wizSubmit(){
+ wizardData[WSTEPS[wizardStep].key]=document.getElementById('wizField').value;
  showLoading('الفريق التنفيذي يعمل على خطة شركتك...');
  try{
-   const data=await api('/wizard/create','POST',{
-     company_name:wizardData.name||'شركتي',
-     description:wizardData.desc||'خدمات رقمية',
-     goal:wizardData.goal||'النمو',
-     risk:wizardData.risk||'متوسط',
-     budget:wizardData.budget||'$5,000',
-   });
-   hideLoading();
-   wizardStep=WIZARD_STEPS.length;
-   renderWizard();
-   const conf=Math.round((data.confidence||0)*100);
-   const verdict=data.constitution_verdict||'—';
-   document.getElementById('wizardResult').innerHTML=`
-   <div class="result-card">
-     <h3 style="margin-bottom:12px">✅ ${wizardData.name||'شركتك'} — الخطة جاهزة</h3>
-     <div class="result-header">
-       <span class="badge ${conf>=70?'badge-green':conf>=40?'badge-yellow':'badge-red'}">الثقة: ${conf}%</span>
-       <span class="badge badge-blue">الدستور: ${verdict}</span>
-     </div>
-     <div class="result-body">${data.plan||'—'}</div>
-     <div class="actions" style="margin-top:16px">
-       <button class="btn btn-primary" onclick="showView('chat')">💬 تحدث مع الفريق</button>
-       <button class="btn btn-secondary" onclick="wizardStep=0;wizardData={};renderWizard();document.getElementById('wizardResult').innerHTML=''">شركة جديدة</button>
-     </div>
-   </div>`;
+ const d=await api('/wizard/create','POST',{
+ company_name:wizardData.name||'شركتي',description:wizardData.desc||'',
+ goal:wizardData.goal||'',risk:wizardData.risk||'',budget:wizardData.budget||'$5,000',
+ });
+ hideLoading();
+ wizardStep=WSTEPS.length;renderWizard();
+ const conf=Math.round((d.confidence||0)*100);
+ // Parse plan into steps if possible
+ const planText=d.plan||'—';
+ const lines=planText.split('\n').filter(l=>l.trim());
+ const hasSteps=lines.length>2;
+ let planHtml='';
+ if(hasSteps){
+ planHtml='<div class="plan-card">'+lines.map((l,i)=>{
+ const clean=l.replace(/^\d+[\.\)]\s*/,'').replace(/^[-•]\s*/,'').trim();
+ if(!clean) return '';
+ return `<div class="plan-step"><div class="plan-num">${i+1}</div><div class="plan-text">${clean}</div></div>`;
+ }).filter(x=>x).join('')+'</div>';
+ }else{
+ planHtml=`<div class="plan-card" style="white-space:pre-wrap;font-size:14px;line-height:1.7">${planText}</div>`;
+ }
+ document.getElementById('wizardResult').innerHTML=`
+ <div class="result-card">
+ <h3 style="margin-bottom:12px">✅ ${wizardData.name||'شركتك'} — الخطة جاهزة</h3>
+ <div class="result-header">
+ <span class="badge ${conf>=70?'badge-green':conf>=40?'badge-yellow':'badge-red'}">الثقة: ${conf}%</span>
+ <span class="badge badge-blue">الدستور: ${d.constitution_verdict||'—'}</span>
+ </div>
+ ${planHtml}
+ <div class="actions" style="margin-top:16px">
+ <button class="btn btn-primary" onclick="showView('chat')">💬 تحدث مع الفريق</button>
+ <button class="btn btn-secondary" onclick="wizardStep=0;wizardData={};renderWizard();document.getElementById('wizardResult').innerHTML=''">شركة جديدة</button>
+ </div>
+ </div>`;
  }catch(e){hideLoading();alert('خطأ: '+e.message)}
 }
 
@@ -471,52 +443,43 @@ async function runScan(){
  if(!desc){alert('أدخل وصف النشاط');return}
  showLoading('محرك الجاذبية يمسح السوق...');
  try{
-   const data=await api('/dashboard/quick-scan','POST',{description:desc});
-   hideLoading();
-   if(!data.success){document.getElementById('scanResult').innerHTML=`<div class="result-card"><p>⚠️ ${data.error}</p></div>`;return}
-   const s=data.scan;
-   const opps=s.opportunities||[];
-   document.getElementById('scanResult').innerHTML=`
-   <div class="result-card">
-     <h3 style="margin-bottom:16px">📊 نتائج المسح: ${s.industry} — ${s.region}</h3>
-     <div class="result-header">
-       <span class="badge badge-blue">المنافسة: ${s.competition_level}</span>
-       <span class="badge badge-green">مصادر: ${s.raw_search_results} نتيجة</span>
-     </div>
-     <h4 style="margin:16px 0 8px">الفرص المكتشفة:</h4>
-     ${opps.map((o,i)=>`
-     <div class="card" style="margin-bottom:12px">
-       <div style="display:flex;justify-content:space-between;align-items:center">
-         <strong>${i+1}. ${o.title||'—'}</strong>
-         <span class="badge ${(o.confidence||0)>=0.7?'badge-green':(o.confidence||0)>=0.4?'badge-yellow':'badge-red'}">
-           ${Math.round((o.confidence||0)*100)}%
-         </span>
-       </div>
-       <p style="color:var(--muted);margin-top:8px;font-size:13px">${o.description||o.evidence||'—'}</p>
-       ${o.is_real!==undefined?`<p style="margin-top:4px;font-size:12px">${o.is_real?'✅ فرصة حقيقية':'⚠️ تحتاج تحقق'} | المخاطرة: ${o.risk_level||'—'}</p>`:''}
-     </div>
-     `).join('')}
-     ${s.entry_strategy?`<h4 style="margin:16px 0 8px">استراتيجية الدخول:</h4><p style="color:var(--muted)">${s.entry_strategy}</p>`:''}
-     ${s.time_to_revenue?`<p style="margin-top:8px;color:var(--muted)">⏱️ الوقت المتوقع للإيرادات: ${s.time_to_revenue}</p>`:''}
-   </div>`;
+ const d=await api('/dashboard/quick-scan','POST',{description:desc});
+ hideLoading();
+ if(!d.success){document.getElementById('scanResult').innerHTML=`<div class="result-card"><p>⚠️ ${d.error}</p></div>`;return}
+ const s=d.scan, opps=s.opportunities||[];
+ document.getElementById('scanResult').innerHTML=`
+ <div class="result-card">
+ <h3 style="margin-bottom:16px">📊 نتائج المسح: ${s.industry} — ${s.region}</h3>
+ <div class="result-header">
+ <span class="badge badge-blue">المنافسة: ${s.competition_level}</span>
+ <span class="badge badge-green">مصادر: ${s.raw_search_results} نتيجة</span>
+ ${s.time_to_revenue?`<span class="badge badge-yellow">⏱️ ${s.time_to_revenue}</span>`:''}
+ </div>
+ <h4 style="margin:16px 0 12px;font-size:15px">الفرص المكتشفة</h4>
+ ${opps.map((o,i)=>{
+ const conf=Math.round((o.confidence||0)*100);
+ const cls=conf>=70?'high':conf>=40?'mid':'low';
+ return `<div class="opp-card">
+ <div class="opp-top"><div class="opp-title">${i+1}. ${o.title||'—'}</div><div class="opp-conf ${cls}">${conf}%</div></div>
+ <div class="opp-desc">${o.description||o.evidence||'—'}</div>
+ <div class="opp-meta">
+ ${o.is_real!==undefined?`<span class="opp-tag">${o.is_real?'✅ حقيقية':'⚠️ تحتاج تحقق'}</span>`:''}
+ ${o.risk_level?`<span class="opp-tag">مخاطرة: ${o.risk_level}</span>`:''}
+ ${o.potential_revenue&&o.potential_revenue!=='unknown'?`<span class="opp-tag">💰 ${o.potential_revenue}</span>`:''}
+ </div></div>`;}).join('')}
+ ${s.entry_strategy?`<div class="card" style="margin-top:16px"><h4 style="margin-bottom:8px">🎯 استراتيجية الدخول</h4><p style="color:var(--muted);font-size:14px;line-height:1.7">${s.entry_strategy}</p></div>`:''}
+ ${s.pain_points&&s.pain_points.length?`<div class="card" style="margin-top:12px"><h4 style="margin-bottom:8px">🔴 نقاط الألم</h4>${s.pain_points.map(p=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted)">• ${p}</div>`).join('')}</div>`:''}
+ </div>`;
  }catch(e){hideLoading();document.getElementById('scanResult').innerHTML=`<div class="result-card"><p>⚠️ ${e.message}</p></div>`}
 }
 
 // ---- Settings ----
-function renderSettings(){
- document.getElementById('apiUrlDisplay').textContent=API;
-}
+function renderSettings(){document.getElementById('apiUrlDisplay').textContent=API}
 async function testConnection(){
- try{
-   showLoading('جاري اختبار الاتصال...');
-   const data=await api('/health');
-   hideLoading();
-   document.getElementById('systemStatus').textContent='🟢 متصل — '+JSON.stringify(data);
-   document.getElementById('providerDisplay').textContent=(data.svos||'—');
- }catch(e){
-   hideLoading();
-   document.getElementById('systemStatus').textContent='🔴 غير متصل — '+e.message;
- }
+ try{showLoading('جاري اختبار الاتصال...'); const d=await api('/health');hideLoading();
+ document.getElementById('systemStatus').textContent='🟢 متصل — SVOS '+d.svos;
+ document.getElementById('providerDisplay').textContent='SVOS '+(d.svos||'');
+ }catch(e){hideLoading();document.getElementById('systemStatus').textContent='🔴 غير متصل — '+e.message}
 }
 
 // ---- Init ----
