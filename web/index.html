@@ -1,125 +1,526 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SVOS Wizard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    :root{--p:#534AB7;--s:#1D9E75;--bg:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb}
-    *{box-sizing:border-box} body{margin:0;font-family:Tajawal,system-ui;background:#f8fafc;color:var(--text)}
-    .wrap{max-width:900px;margin:24px auto;padding:0 16px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.04)}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.title{font-size:26px;font-weight:700;color:var(--p)}
-    .sub{color:var(--muted)} .lang button{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
-    .progress{height:10px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:14px 0}.bar{height:100%;background:linear-gradient(90deg,var(--p),var(--s));width:20%;transition:.3s}
-    .step{display:none}.step.active{display:block} label{display:block;font-weight:600;margin-bottom:8px} input,textarea,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit}
-    .actions{display:flex;justify-content:space-between;margin-top:16px;gap:10px}.btn{border:none;background:var(--p);color:#fff;padding:10px 16px;border-radius:12px;cursor:pointer}
-    .btn.sec{background:#fff;color:#111;border:1px solid var(--line)} .btn.green{background:var(--s)} .result{display:none;margin-top:16px}
-    .pill{display:inline-block;background:#f3f4f6;padding:6px 10px;border-radius:999px;margin-inline-end:8px}
-    .chat{display:none;margin-top:16px}.chat-box{height:260px;overflow:auto;background:#fafafa;border:1px solid var(--line);border-radius:12px;padding:12px}
-    .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin:8px 0;white-space:pre-wrap}.me{margin-left:auto;background:#DCF8C6}.bot{background:#eee}
-    .chat-row{display:flex;gap:8px;margin-top:8px}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SVOS — Sovereign Ventures OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0a0a1a;--bg2:#111128;--bg3:#1a1a3e;--bg4:#222255;
+ --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;--danger:#ef4444;--warn:#f59e0b;
+ --text:#e2e8f0;--muted:#64748b;--border:#1e293b;
+ --radius:12px;--radius2:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Tajawal,system-ui;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+/* Layout */
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:100}
+.main{flex:1;margin-right:240px;padding:24px;min-height:100vh}
+/* Sidebar */
+.logo{padding:20px;text-align:center;border-bottom:1px solid var(--border)}
+.logo h1{font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo p{font-size:11px;color:var(--muted);margin-top:4px}
+.nav{flex:1;padding:12px 8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius);cursor:pointer;color:var(--muted);transition:.2s;margin-bottom:4px;font-size:14px;font-weight:500}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(124,58,237,.15));color:var(--accent);border:1px solid rgba(0,212,255,.2)}
+.nav-icon{width:20px;text-align:center;font-size:16px}
+.sidebar-footer{padding:16px;border-top:1px solid var(--border);text-align:center}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);display:inline-block;margin-left:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* Views */
+.view{display:none}.view.active{display:block}
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;transition:.2s}
+.card:hover{border-color:rgba(0,212,255,.3)}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-title{font-size:16px;font-weight:700}
+/* Stats Row */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;text-align:center}
+.stat-value{font-size:32px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:13px;color:var(--muted);margin-top:4px}
+/* Agent Grid */
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px}
+.agent-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;cursor:pointer;transition:.3s}
+.agent-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 30px rgba(0,212,255,.1)}
+.agent-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.agent-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff}
+.agent-name{font-weight:700;font-size:15px}
+.agent-role{font-size:12px;color:var(--muted)}
+.agent-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent3)}
+.agent-status .dot{width:6px;height:6px;border-radius:50%;background:var(--accent3)}
+/* Wizard */
+.wizard-container{max-width:700px;margin:0 auto}
+.wizard-steps{display:flex;gap:8px;margin-bottom:24px}
+.wizard-step{flex:1;height:4px;border-radius:2px;background:var(--bg3);transition:.3s}
+.wizard-step.done{background:var(--accent3)}
+.wizard-step.current{background:var(--accent)}
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-weight:600;margin-bottom:8px;font-size:14px}
+.form-input,.form-select,.form-textarea{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:inherit;font-size:14px;transition:.2s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+.form-textarea{resize:vertical;min-height:80px}
+/* Buttons */
+.btn{padding:12px 24px;border:none;border-radius:var(--radius);font:inherit;font-weight:600;cursor:pointer;transition:.2s;font-size:14px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent)}
+.btn-success{background:var(--accent3);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:8px 16px;font-size:13px}
+.actions{display:flex;gap:12px;justify-content:flex-end;margin-top:20px}
+/* Chat */
+.chat-container{display:flex;flex-direction:column;height:calc(100vh - 120px);max-width:900px;margin:0 auto}
+.chat-agents{display:flex;gap:8px;padding:12px 0;overflow-x:auto;margin-bottom:12px}
+.chat-agent-btn{padding:8px 16px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;font:inherit;font-size:13px;transition:.2s}
+.chat-agent-btn.active{background:rgba(0,212,255,.15);color:var(--accent);border-color:var(--accent)}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius2)}
+.chat-msg{max-width:80%;padding:12px 16px;border-radius:var(--radius);margin-bottom:12px;font-size:14px;line-height:1.6;white-space:pre-wrap}
+.chat-msg.user{margin-right:auto;background:var(--bg4);margin-left:auto}
+.chat-msg.agent{margin-left:auto;margin-right:0;background:var(--bg3);border:1px solid var(--border)}
+.chat-msg .msg-header{font-size:11px;color:var(--accent);margin-bottom:4px;font-weight:600}
+.chat-input-row{display:flex;gap:10px;margin-top:12px}
+.chat-input-row input{flex:1}
+/* Results Card */
+.result-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px;margin-top:20px}
+.result-header{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.badge{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-blue{background:rgba(0,212,255,.15);color:var(--accent)}
+.badge-green{background:rgba(16,185,129,.15);color:var(--accent3)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--danger)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--warn)}
+.result-body{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:400px;overflow-y:auto}
+/* Loading */
+.loading{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,26,.8);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
+.loading-text{color:var(--accent);font-size:16px;font-weight:600}
+/* Page Header */
+.page-header{margin-bottom:24px}
+.page-header h2{font-size:24px;font-weight:800}
+.page-header p{color:var(--muted);margin-top:4px;font-size:14px}
+/* Settings */
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border)}
+.setting-label{font-weight:600}
+.setting-desc{font-size:13px;color:var(--muted);margin-top:2px}
+/* Responsive */
+@media(max-width:768px){
+ .sidebar{width:60px}.sidebar .nav-text,.sidebar .logo p,.sidebar-footer span{display:none}
+ .logo h1{font-size:14px}.main{margin-right:60px;padding:16px}
+ .agents-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}
+}
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.view.active{animation:fadeIn .3s ease}
+</style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <div class="top">
-      <div>
-        <div class="title" id="title">SVOS - نظام تشغيل الأعمال السيادي</div>
-        <div class="sub" id="subtitle">أنشئ شركتك الرقمية في دقائق</div>
-      </div>
-      <div class="lang"><button id="toggleLang">English</button></div>
-    </div>
-    <div class="progress"><div id="bar" class="bar"></div></div>
-
-    <div class="step active" data-step="1"><label id="l1"></label><input id="company" /></div>
-    <div class="step" data-step="2"><label id="l2"></label><textarea id="desc" rows="3"></textarea></div>
-    <div class="step" data-step="3"><label id="l3"></label><select id="goal"></select></div>
-    <div class="step" data-step="4"><label id="l4"></label><select id="risk"></select></div>
-    <div class="step" data-step="5"><label id="l5"></label><select id="budget"><option>$1,000</option><option selected>$5,000</option><option>$10,000+</option></select></div>
-
-    <div class="actions">
-      <button class="btn sec" id="prev">السابق</button>
-      <button class="btn" id="next">التالي</button>
-      <button class="btn green" id="create" style="display:none">أنشئ شركتي</button>
-    </div>
-
-    <div class="result" id="result">
-      <h3 id="rTitle">النتيجة</h3>
-      <div><span class="pill" id="confidence"></span><span class="pill" id="verdict"></span></div>
-      <pre id="plan" style="white-space:pre-wrap;background:#f8fafc;border:1px solid var(--line);padding:12px;border-radius:12px"></pre>
-    </div>
-
-    <div class="chat" id="chat">
-      <h3 id="chatTitle">محادثة الفريق التنفيذي</h3>
-      <div class="chat-box" id="chatBox"></div>
-      <div class="chat-row"><input id="chatInput" /><button class="btn green" id="send">إرسال</button></div>
-    </div>
-  </div>
+<div class="app">
+<!-- Sidebar -->
+<nav class="sidebar">
+<div class="logo">
+<h1>SVOS</h1>
+<p>Sovereign Ventures OS</p>
 </div>
-
+<div class="nav">
+<div class="nav-item active" onclick="showView('overview')">
+<span class="nav-icon">📊</span><span class="nav-text">نظرة عامة</span>
+</div>
+<div class="nav-item" onclick="showView('agents')">
+<span class="nav-icon">🤖</span><span class="nav-text">الوكلاء</span>
+</div>
+<div class="nav-item" onclick="showView('create')">
+<span class="nav-icon">🚀</span><span class="nav-text">إنشاء شركة</span>
+</div>
+<div class="nav-item" onclick="showView('chat')">
+<span class="nav-icon">💬</span><span class="nav-text">المحادثة</span>
+</div>
+<div class="nav-item" onclick="showView('scan')">
+<span class="nav-icon">🔍</span><span class="nav-text">مسح السوق</span>
+</div>
+<div class="nav-item" onclick="showView('settings')">
+<span class="nav-icon">⚙️</span><span class="nav-text">الإعدادات</span>
+</div>
+</div>
+<div class="sidebar-footer">
+<span class="status-dot"></span>
+<span style="font-size:12px;color:var(--accent3)">النظام يعمل</span>
+</div>
+</nav>
+<!-- Main Content -->
+<div class="main">
+<!-- Overview -->
+<div class="view active" id="view-overview">
+<div class="page-header">
+<h2>🏢 لوحة التحكم التنفيذية</h2>
+<p>SVOS — نظام تشغيل الأعمال السيادي</p>
+</div>
+<div class="stats" id="statsRow">
+<div class="stat-card"><div class="stat-value" id="stat-agents">9</div><div class="stat-label">وكيل تنفيذي</div></div>
+<div class="stat-card"><div class="stat-value" id="stat-status">●</div><div class="stat-label">حالة النظام</div></div>
+<div class="stat-card"><div class="stat-value" id="stat-provider">—</div><div class="stat-label">نموذج الذكاء</div></div>
+<div class="stat-card"><div class="stat-value" id="stat-version">v1.0</div><div class="stat-label">الإصدار</div></div>
+</div>
+<div class="card">
+<div class="card-header"><span class="card-title">الوكلاء التنفيذيون</span></div>
+<div class="agents-grid" id="overviewAgents"></div>
+</div>
+</div>
+<!-- Agents -->
+<div class="view" id="view-agents">
+<div class="page-header">
+<h2>🤖 الوكلاء التنفيذيون</h2>
+<p>جميع الوكلاء وحالتهم ومهامهم</p>
+</div>
+<div class="agents-grid" id="agentsGrid"></div>
+</div>
+<!-- Create Company -->
+<div class="view" id="view-create">
+<div class="page-header">
+<h2>🚀 إنشاء شركة رقمية</h2>
+<p>أدخل بيانات شركتك وسيقوم الفريق التنفيذي بوضع الخطة</p>
+</div>
+<div class="wizard-container">
+<div class="wizard-steps" id="wizardSteps"></div>
+<div id="wizardContent"></div>
+<div class="actions" id="wizardActions"></div>
+<div id="wizardResult"></div>
+</div>
+</div>
+<!-- Chat -->
+<div class="view" id="view-chat">
+<div class="page-header">
+<h2>💬 محادثة الفريق التنفيذي</h2>
+<p>تحدث مباشرة مع أي وكيل</p>
+</div>
+<div class="chat-container">
+<div class="chat-agents" id="chatAgents"></div>
+<div class="chat-messages" id="chatMessages"></div>
+<div class="chat-input-row">
+<input class="form-input" id="chatInput" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendChat()"/>
+<button class="btn btn-primary" onclick="sendChat()">إرسال</button>
+</div>
+</div>
+</div>
+<!-- Market Scan -->
+<div class="view" id="view-scan">
+<div class="page-header">
+<h2>🔍 مسح السوق</h2>
+<p>اكتشف الفرص الحقيقية في أي سوق</p>
+</div>
+<div class="wizard-container">
+<div class="card">
+<div class="form-group">
+<label class="form-label">وصف النشاط أو الفكرة</label>
+<textarea class="form-textarea" id="scanDesc" rows="3" placeholder="مثال: تسويق رقمي للمطاعم في السعودية"></textarea>
+</div>
+<div class="actions">
+<button class="btn btn-primary" onclick="runScan()" id="scanBtn">ابدأ المسح</button>
+</div>
+</div>
+<div id="scanResult"></div>
+</div>
+</div>
+<!-- Settings -->
+<div class="view" id="view-settings">
+<div class="page-header">
+<h2>⚙️ الإعدادات</h2>
+<p>إعدادات النظام والاتصال</p>
+</div>
+<div class="card">
+<div class="setting-row">
+<div><div class="setting-label">عنوان الخادم (API)</div><div class="setting-desc" id="apiUrlDisplay">—</div></div>
+<button class="btn btn-sm btn-secondary" onclick="testConnection()">اختبر الاتصال</button>
+</div>
+<div class="setting-row">
+<div><div class="setting-label">نموذج الذكاء الاصطناعي</div><div class="setting-desc" id="providerDisplay">—</div></div>
+</div>
+<div class="setting-row">
+<div><div class="setting-label">حالة النظام</div><div class="setting-desc" id="systemStatus">—</div></div>
+<button class="btn btn-sm btn-secondary" onclick="loadOverview()">تحديث</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+<div class="loading" style="width:40px;height:40px;border-width:3px"></div>
+<div class="loading-text" id="loadingText">جاري التحميل...</div>
+</div>
 <script>
-const API='http://localhost:8000';
-let step=1, lang='ar';
-const T={
- ar:{dir:'rtl',toggle:'English',title:'SVOS - نظام تشغيل الأعمال السيادي',subtitle:'أنشئ شركتك الرقمية في دقائق',
- l1:'اسم الشركة',l2:'وصف النشاط',l3:'الهدف الرئيسي',l4:'مستوى المخاطرة',l5:'الميزانية الشهرية',prev:'السابق',next:'التالي',create:'أنشئ شركتي',
- goals:['زيادة المبيعات والعملاء','تقليل التكاليف وتحسين الكفاءة','إطلاق منتج/خدمة جديدة','التوسع في سوق جديد'],
- risks:['محافظ','متوسط','جريء'],res:'النتيجة',chat:'محادثة الفريق التنفيذي',send:'إرسال',ask:'اكتب رسالتك...'},
- en:{dir:'ltr',toggle:'العربية',title:'SVOS - Sovereign Business OS',subtitle:'Build your digital company in minutes',
- l1:'Company name',l2:'Business description',l3:'Primary goal',l4:'Risk level',l5:'Monthly budget',prev:'Back',next:'Next',create:'Create Company',
- goals:['Increase sales and clients','Reduce costs and improve efficiency','Launch new product/service','Expand into a new market'],
- risks:['Conservative','Moderate','Aggressive'],res:'Result',chat:'Executive Team Chat',send:'Send',ask:'Type your message...'}
+// =====================================================================
+// SVOS Dashboard — JavaScript
+// =====================================================================
+const API = window.location.origin;
+const AGENTS = [
+{id:'ceo',name:'CEO',nameAr:'الرئيس التنفيذي',role:'Chief Executive Officer',dept:'Executive',color:'#7c3aed',icon:'👑'},
+{id:'cfo',name:'CFO',nameAr:'المدير المالي',role:'Chief Financial Officer',dept:'Finance',color:'#10b981',icon:'💰'},
+{id:'cmo',name:'CMO',nameAr:'مدير التسويق',role:'Chief Marketing Officer',dept:'Marketing',color:'#f59e0b',icon:'📣'},
+{id:'coo',name:'COO',nameAr:'مدير العمليات',role:'Chief Operations Officer',dept:'Operations',color:'#3b82f6',icon:'⚙️'},
+{id:'cto',name:'CTO',nameAr:'المدير التقني',role:'Chief Technology Officer',dept:'Technology',color:'#00d4ff',icon:'💻'},
+{id:'clo',name:'CLO',nameAr:'المستشار القانوني',role:'Chief Legal Officer',dept:'Legal',color:'#8b5cf6',icon:'⚖️'},
+{id:'chro',name:'CHRO',nameAr:'مدير الموارد البشرية',role:'Chief HR Officer',dept:'HR',color:'#ec4899',icon:'👥'},
+{id:'guardian',name:'Guardian',nameAr:'الحارس',role:'Constitutional Guardian',dept:'Governance',color:'#ef4444',icon:'🛡️'},
+{id:'radar',name:'Radar',nameAr:'الرادار',role:'Market Intelligence',dept:'Intelligence',color:'#06b6d4',icon:'📡'},
+];
+let currentView = 'overview';
+let currentAgent = 'ceo';
+let wizardStep = 0;
+let wizardData = {};
+
+// ---- Navigation ----
+function showView(id) {
+ document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+ document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+ document.getElementById('view-'+id).classList.add('active');
+ document.querySelectorAll('.nav-item')[['overview','agents','create','chat','scan','settings'].indexOf(id)].classList.add('active');
+ currentView = id;
+ if(id==='overview') loadOverview();
+ if(id==='agents') renderAgentsPage();
+ if(id==='chat') renderChatPage();
+ if(id==='create') renderWizard();
+ if(id==='settings') renderSettings();
 }
-function applyLang(){const t=T[lang];document.documentElement.lang=lang;document.documentElement.dir=t.dir;
-['l1','l2','l3','l4','l5'].forEach(k=>document.getElementById(k).textContent=t[k]);
-document.getElementById('title').textContent=t.title;document.getElementById('subtitle').textContent=t.subtitle;
-document.getElementById('toggleLang').textContent=t.toggle;document.getElementById('prev').textContent=t.prev;document.getElementById('next').textContent=t.next;
-document.getElementById('create').textContent=t.create;document.getElementById('rTitle').textContent=t.res;document.getElementById('chatTitle').textContent=t.chat;document.getElementById('send').textContent=t.send;
-const goal=document.getElementById('goal');goal.innerHTML=t.goals.map(x=>`<option>${x}</option>`).join('');
-const risk=document.getElementById('risk');risk.innerHTML=t.risks.map(x=>`<option>${x}</option>`).join('');
-document.getElementById('chatInput').placeholder=t.ask;}
 
-function showStep(){document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
-document.getElementById('bar').style.width=(step*20)+'%';document.getElementById('create').style.display=step===5?'inline-block':'none';document.getElementById('next').style.display=step===5?'none':'inline-block';}
+// ---- API Helper ----
+async function api(path, method='GET', body=null) {
+ const opts = {method, headers:{'Content-Type':'application/json'}};
+ if(body) opts.body = JSON.stringify(body);
+ const r = await fetch(API+path, opts);
+ if(!r.ok) throw new Error(`API ${r.status}`);
+ return r.json();
+}
+function showLoading(text='جاري التحميل...'){
+ document.getElementById('loadingText').textContent=text;
+ document.getElementById('loadingOverlay').style.display='flex';
+}
+function hideLoading(){document.getElementById('loadingOverlay').style.display='none'}
 
-document.getElementById('toggleLang').onclick=()=>{lang=lang==='ar'?'en':'ar';applyLang();};
-document.getElementById('prev').onclick=()=>{if(step>1){step--;showStep();}};
-document.getElementById('next').onclick=()=>{if(step<5){step++;showStep();}};
-
-document.getElementById('create').onclick=async()=>{
- const body={company_name:company.value||'My Company',description:desc.value||'Digital services',goal:goal.value,risk:risk.value,budget:budget.value};
- let data;
- try{let r=await fetch(API+'/wizard/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); if(r.ok){data=await r.json();}
- else { // fallback
-   const rr=await fetch(API+'/board/decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request:`Create growth plan for ${body.company_name}`,context:{business_type:body.description,topic:body.goal,pain_points:[body.goal],budget:body.budget}})});
-   const b=await rr.json(); data={plan:b?.board_decision?.recommendation||JSON.stringify(b),confidence:b?.board_decision?.confidence||0,constitution_verdict:b?.board_decision?.aurora_approval?.approved?'approved':'rejected'};
- }}catch(e){alert('API error: '+e.message);return}
- result.style.display='block'; chat.style.display='block';
- confidence.textContent='Confidence: '+Math.round((data.confidence||0)*100)+'%';
- verdict.textContent='Constitution: '+(data.constitution_verdict||'-');
- plan.textContent=data.plan||'-';
- addMsg('bot','SVOS','جاهز، ابدأ المحادثة مع الفريق التنفيذي.');
-};
-
-function addMsg(side,who,text){const d=document.createElement('div');d.className='msg '+(side==='me'?'me':'bot');d.textContent=(side==='bot'?`[${who}] `:'')+text;chatBox.appendChild(d);chatBox.scrollTop=chatBox.scrollHeight;}
-
-document.getElementById('send').onclick=async()=>{
- const text=chatInput.value.trim(); if(!text) return; addMsg('me','YOU',text); chatInput.value='';
- const payload={message:text,company_name:company.value||'SVOS',description:desc.value||'',goal:goal.value||'',risk:risk.value||'moderate',agent_id:'ceo'};
- try{let r=await fetch(API+'/wizard/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); let d;
- if(r.ok){d=await r.json(); addMsg('bot',d.agent||'CEO',d.reply||'...');}
- else { // fallback existing endpoint
-   const rr=await fetch(API+'/agents/ceo/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_context:desc.value||'',goals:[goal.value||''],task:text})});
-   d=await rr.json(); addMsg('bot','CEO',d.decision||JSON.stringify(d));
+// ---- Overview ----
+async function loadOverview(){
+ try{
+   const data = await api('/dashboard/overview');
+   document.getElementById('stat-agents').textContent = data.agents_total||9;
+   document.getElementById('stat-status').textContent = '🟢';
+   document.getElementById('stat-provider').textContent = (data.llm_provider||'—').toUpperCase();
+   document.getElementById('stat-version').textContent = data.version||'v1.0';
+ }catch(e){
+   document.getElementById('stat-status').textContent = '🔴';
  }
- }catch(e){addMsg('bot','System','Error: '+e.message)}
+ renderOverviewAgents();
+}
+function renderOverviewAgents(){
+ const grid = document.getElementById('overviewAgents');
+ grid.innerHTML = AGENTS.map(a => `
+ <div class="agent-card" onclick="showView('chat');selectAgent('${a.id}')">
+   <div class="agent-header">
+     <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
+     <div>
+       <div class="agent-name">${a.nameAr}</div>
+       <div class="agent-role">${a.role}</div>
+     </div>
+   </div>
+   <div class="agent-status"><span class="dot"></span> نشط ومستعد</div>
+ </div>
+ `).join('');
 }
 
-applyLang(); showStep();
+// ---- Agents Page ----
+function renderAgentsPage(){
+ const grid = document.getElementById('agentsGrid');
+ grid.innerHTML = AGENTS.map(a => `
+ <div class="agent-card" onclick="showView('chat');selectAgent('${a.id}')">
+   <div class="agent-header">
+     <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
+     <div>
+       <div class="agent-name">${a.nameAr} — ${a.name}</div>
+       <div class="agent-role">${a.role}</div>
+     </div>
+   </div>
+   <div style="font-size:12px;color:var(--muted);margin-top:8px">القسم: ${a.dept}</div>
+   <div class="agent-status" style="margin-top:8px"><span class="dot"></span> نشط — انقر للمحادثة</div>
+ </div>
+ `).join('');
+}
+
+// ---- Chat ----
+function renderChatPage(){
+ const bar = document.getElementById('chatAgents');
+ bar.innerHTML = AGENTS.map(a => `<button class="chat-agent-btn ${a.id===currentAgent?'active':''}" onclick="selectAgent('${a.id}')">${a.icon} ${a.nameAr}</button>`
+ ).join('');
+}
+function selectAgent(id){
+ currentAgent = id;
+ renderChatPage();
+ const box = document.getElementById('chatMessages');
+ if(!box.querySelector(`[data-agent="${id}"]`)){
+   const a = AGENTS.find(x=>x.id===id);
+   addChatMsg('agent', a.nameAr, `مرحباً، أنا ${a.nameAr} (${a.role}). كيف أقدر أساعدك؟`, id);
+ }
+}
+function addChatMsg(type, name, text, agentId=''){
+ const box = document.getElementById('chatMessages');
+ const div = document.createElement('div');
+ div.className = 'chat-msg '+(type==='user'?'user':'agent');
+ if(agentId) div.setAttribute('data-agent', agentId);
+ div.innerHTML = (type==='agent'?`<div class="msg-header">${name}</div>`:'')+text;
+ box.appendChild(div);
+ box.scrollTop = box.scrollHeight;
+}
+async function sendChat(){
+ const input = document.getElementById('chatInput');
+ const text = input.value.trim();
+ if(!text) return;
+ addChatMsg('user','أنت',text);
+ input.value = '';
+ const a = AGENTS.find(x=>x.id===currentAgent);
+ try{
+   const data = await api('/dashboard/agent-chat','POST',{
+     message:text,
+     agent_id:currentAgent,
+     company_name: wizardData.name||'شركتي',
+     description: wizardData.desc||'خدمات رقمية',
+     goal: wizardData.goal||'النمو',
+     risk: wizardData.risk||'متوسط',
+   });
+   addChatMsg('agent', data.agent_name_ar||a.nameAr, data.reply, currentAgent);
+ }catch(e){
+   addChatMsg('agent','النظام','⚠️ خطأ في الاتصال: '+e.message);
+ }
+}
+
+// ---- Wizard ----
+const WIZARD_STEPS = [
+ {key:'name',label:'اسم الشركة',type:'input',placeholder:'مثال: شركة زيادة للتقنية'},
+ {key:'desc',label:'وصف النشاط',type:'textarea',placeholder:'ماذا تفعل شركتك؟ صف النشاط بالتفصيل'},
+ {key:'goal',label:'الهدف الرئيسي',type:'select',options:['زيادة المبيعات','تقليل التكاليف','إطلاق منتج جديد','التوسع في سوق جديد']},
+ {key:'risk',label:'مستوى المخاطرة',type:'select',options:['محافظ','متوسط','جريء']},
+ {key:'budget',label:'الميزانية الشهرية',type:'select',options:['$1,000','$5,000','$10,000','$25,000+']},
+];
+function renderWizard(){
+ const steps = document.getElementById('wizardSteps');
+ steps.innerHTML = WIZARD_STEPS.map((_,i)=> `<div class="wizard-step ${i<wizardStep?'done':''} ${i===wizardStep?'current':''}"></div>`
+ ).join('');
+ const content = document.getElementById('wizardContent');
+ if(wizardStep >= WIZARD_STEPS.length){
+   content.innerHTML = '';
+   document.getElementById('wizardActions').innerHTML = '';
+   return;
+ }
+ const s = WIZARD_STEPS[wizardStep];
+ let field = '';
+ if(s.type==='input') field=`<input class="form-input" id="wizField" placeholder="${s.placeholder}" value="${wizardData[s.key]||''}"/>`;
+ if(s.type==='textarea') field=`<textarea class="form-textarea" id="wizField" rows="3" placeholder="${s.placeholder}">${wizardData[s.key]||''}</textarea>`;
+ if(s.type==='select') field=`<select class="form-select" id="wizField">${s.options.map(o=>`<option ${wizardData[s.key]===o?'selected':''}>${o}</option>`).join('')}</select>`;
+ content.innerHTML=`<div class="card"><div class="form-group"><label class="form-label">${s.label}</label>${field}</div></div>`;
+ document.getElementById('wizardActions').innerHTML=`
+ ${wizardStep>0?'<button class="btn btn-secondary" onclick="wizardPrev()">السابق</button>':''}
+ ${wizardStep<WIZARD_STEPS.length-1?'<button class="btn btn-primary" onclick="wizardNext()">التالي</button>':''}
+ ${wizardStep===WIZARD_STEPS.length-1?'<button class="btn btn-success" onclick="wizardSubmit()">🚀 أنشئ شركتي</button>':''}
+ `;
+}
+function wizardNext(){
+ const s=WIZARD_STEPS[wizardStep];
+ wizardData[s.key]=document.getElementById('wizField').value;
+ if(wizardStep<WIZARD_STEPS.length-1){wizardStep++;renderWizard();}
+}
+function wizardPrev(){if(wizardStep>0){wizardStep--;renderWizard();}}
+async function wizardSubmit(){
+ const s=WIZARD_STEPS[wizardStep];
+ wizardData[s.key]=document.getElementById('wizField').value;
+ showLoading('الفريق التنفيذي يعمل على خطة شركتك...');
+ try{
+   const data=await api('/wizard/create','POST',{
+     company_name:wizardData.name||'شركتي',
+     description:wizardData.desc||'خدمات رقمية',
+     goal:wizardData.goal||'النمو',
+     risk:wizardData.risk||'متوسط',
+     budget:wizardData.budget||'$5,000',
+   });
+   hideLoading();
+   wizardStep=WIZARD_STEPS.length;
+   renderWizard();
+   const conf=Math.round((data.confidence||0)*100);
+   const verdict=data.constitution_verdict||'—';
+   document.getElementById('wizardResult').innerHTML=`
+   <div class="result-card">
+     <h3 style="margin-bottom:12px">✅ ${wizardData.name||'شركتك'} — الخطة جاهزة</h3>
+     <div class="result-header">
+       <span class="badge ${conf>=70?'badge-green':conf>=40?'badge-yellow':'badge-red'}">الثقة: ${conf}%</span>
+       <span class="badge badge-blue">الدستور: ${verdict}</span>
+     </div>
+     <div class="result-body">${data.plan||'—'}</div>
+     <div class="actions" style="margin-top:16px">
+       <button class="btn btn-primary" onclick="showView('chat')">💬 تحدث مع الفريق</button>
+       <button class="btn btn-secondary" onclick="wizardStep=0;wizardData={};renderWizard();document.getElementById('wizardResult').innerHTML=''">شركة جديدة</button>
+     </div>
+   </div>`;
+ }catch(e){hideLoading();alert('خطأ: '+e.message)}
+}
+
+// ---- Market Scan ----
+async function runScan(){
+ const desc=document.getElementById('scanDesc').value.trim();
+ if(!desc){alert('أدخل وصف النشاط');return}
+ showLoading('محرك الجاذبية يمسح السوق...');
+ try{
+   const data=await api('/dashboard/quick-scan','POST',{description:desc});
+   hideLoading();
+   if(!data.success){document.getElementById('scanResult').innerHTML=`<div class="result-card"><p>⚠️ ${data.error}</p></div>`;return}
+   const s=data.scan;
+   const opps=s.opportunities||[];
+   document.getElementById('scanResult').innerHTML=`
+   <div class="result-card">
+     <h3 style="margin-bottom:16px">📊 نتائج المسح: ${s.industry} — ${s.region}</h3>
+     <div class="result-header">
+       <span class="badge badge-blue">المنافسة: ${s.competition_level}</span>
+       <span class="badge badge-green">مصادر: ${s.raw_search_results} نتيجة</span>
+     </div>
+     <h4 style="margin:16px 0 8px">الفرص المكتشفة:</h4>
+     ${opps.map((o,i)=>`
+     <div class="card" style="margin-bottom:12px">
+       <div style="display:flex;justify-content:space-between;align-items:center">
+         <strong>${i+1}. ${o.title||'—'}</strong>
+         <span class="badge ${(o.confidence||0)>=0.7?'badge-green':(o.confidence||0)>=0.4?'badge-yellow':'badge-red'}">
+           ${Math.round((o.confidence||0)*100)}%
+         </span>
+       </div>
+       <p style="color:var(--muted);margin-top:8px;font-size:13px">${o.description||o.evidence||'—'}</p>
+       ${o.is_real!==undefined?`<p style="margin-top:4px;font-size:12px">${o.is_real?'✅ فرصة حقيقية':'⚠️ تحتاج تحقق'} | المخاطرة: ${o.risk_level||'—'}</p>`:''}
+     </div>
+     `).join('')}
+     ${s.entry_strategy?`<h4 style="margin:16px 0 8px">استراتيجية الدخول:</h4><p style="color:var(--muted)">${s.entry_strategy}</p>`:''}
+     ${s.time_to_revenue?`<p style="margin-top:8px;color:var(--muted)">⏱️ الوقت المتوقع للإيرادات: ${s.time_to_revenue}</p>`:''}
+   </div>`;
+ }catch(e){hideLoading();document.getElementById('scanResult').innerHTML=`<div class="result-card"><p>⚠️ ${e.message}</p></div>`}
+}
+
+// ---- Settings ----
+function renderSettings(){
+ document.getElementById('apiUrlDisplay').textContent=API;
+}
+async function testConnection(){
+ try{
+   showLoading('جاري اختبار الاتصال...');
+   const data=await api('/health');
+   hideLoading();
+   document.getElementById('systemStatus').textContent='🟢 متصل — '+JSON.stringify(data);
+   document.getElementById('providerDisplay').textContent=(data.svos||'—');
+ }catch(e){
+   hideLoading();
+   document.getElementById('systemStatus').textContent='🔴 غير متصل — '+e.message;
+ }
+}
+
+// ---- Init ----
+loadOverview();
 </script>
 </body>
 </html>

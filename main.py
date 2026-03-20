@@ -555,6 +555,116 @@ if Path('web').exists():
     app.mount('/web', StaticFiles(directory='web'), name='web')
 
 
+# =====================================================================
+# DASHBOARD ENDPOINTS — لوحة التحكم التنفيذية
+# =====================================================================
+SVOS_AGENTS = [
+    {"id": "ceo", "name": "CEO Agent", "name_ar": "الرئيس التنفيذي", "role": "Chief Executive Officer", "department": "Executive", "icon": "crown"},
+    {"id": "cfo", "name": "CFO Agent", "name_ar": "المدير المالي", "role": "Chief Financial Officer", "department": "Finance", "icon": "coins"},
+    {"id": "cmo", "name": "CMO Agent", "name_ar": "مدير التسويق", "role": "Chief Marketing Officer", "department": "Marketing", "icon": "megaphone"},
+    {"id": "coo", "name": "COO Agent", "name_ar": "مدير العمليات", "role": "Chief Operations Officer", "department": "Operations", "icon": "cog"},
+    {"id": "cto", "name": "CTO Agent", "name_ar": "المدير التقني", "role": "Chief Technology Officer", "department": "Technology", "icon": "cpu"},
+    {"id": "clo", "name": "CLO Agent", "name_ar": "المستشار القانوني", "role": "Chief Legal Officer", "department": "Legal", "icon": "scale"},
+    {"id": "chro", "name": "CHRO Agent", "name_ar": "مدير الموارد البشرية", "role": "Chief HR Officer", "department": "HR", "icon": "users"},
+    {"id": "guardian", "name": "Guardian", "name_ar": "الحارس", "role": "Constitutional Guardian", "department": "Governance", "icon": "shield"},
+    {"id": "radar", "name": "Radar", "name_ar": "الرادار", "role": "Market Intelligence", "department": "Intelligence", "icon": "radar"},
+]
+
+
+@app.get('/dashboard/overview')
+async def dashboard_overview():
+    """نظرة عامة على حالة النظام."""
+    perf = monitor.scores
+    top = monitor.top_performers()
+    return {
+        "system_status": "operational",
+        "version": settings.app_version,
+        "llm_provider": settings.llm_provider,
+        "agents_total": len(SVOS_AGENTS),
+        "agents_active": len(SVOS_AGENTS),
+        "performance_scores": perf,
+        "top_performers": top,
+        "uptime": "active",
+    }
+
+
+@app.get('/dashboard/agents')
+async def dashboard_agents():
+    """قائمة كل الوكلاء مع حالتهم."""
+    agents_with_status = []
+    for agent in SVOS_AGENTS:
+        score = monitor.scores.get(agent["id"], {})
+        agents_with_status.append({
+            **agent,
+            "status": "active",
+            "success_rate": score.get("success_rate", 0),
+            "tasks_completed": score.get("total_tasks", 0),
+        })
+    return {"agents": agents_with_status}
+
+
+@app.post('/dashboard/agent-chat')
+async def dashboard_agent_chat(req: WizardChatRequest):
+    """محادثة مع أي وكيل من الداشبورد."""
+    role = (req.agent_id or 'ceo').upper()
+    agent_info = next((a for a in SVOS_AGENTS if a["id"] == req.agent_id.lower()), SVOS_AGENTS[0])
+
+    system = (
+        f"You are {agent_info['name']} ({agent_info['role']}) in SVOS. "
+        f"Department: {agent_info['department']}. "
+        f"Company: {req.company_name}. Description: {req.description}. "
+        f"Goal: {req.goal}. Risk tolerance: {req.risk}. "
+        "You are a world-class executive AI agent. Be strategic, concise, actionable. "
+        "Reply in the user's language. If Arabic, reply in Arabic."
+    )
+
+    out = await llm_for_wizard.complete(system_prompt=system, user_message=req.message)
+
+    return {
+        "agent": agent_info["id"],
+        "agent_name": agent_info["name"],
+        "agent_name_ar": agent_info["name_ar"],
+        "department": agent_info["department"],
+        "reply": out,
+    }
+
+
+@app.post('/dashboard/quick-scan')
+async def dashboard_quick_scan(body: dict):
+    """مسح سريع للسوق من الداشبورد."""
+    description = body.get("description", "")
+    if not description:
+        raise HTTPException(400, "description is required")
+
+    try:
+        from engines.gravity_engine import GravityEngine
+
+        engine = GravityEngine()
+        result = await engine.find_demand_gravity(description)
+        return {"success": True, "scan": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post('/dashboard/simulate')
+async def dashboard_simulate(body: dict):
+    """محاكاة مستقبلية من الداشبورد."""
+    decision = body.get("decision", "")
+    context = body.get("context", {})
+
+    if not decision:
+        raise HTTPException(400, "decision is required")
+
+    try:
+        from engines.time_engine import TimeEngine
+
+        engine = TimeEngine()
+        result = await engine.should_proceed(decision, context)
+        return {"success": True, "simulation": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.get('/')
 async def root():
     if Path('web/index.html').exists():
