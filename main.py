@@ -716,6 +716,130 @@ async def execute_full_package(body: dict):
     }
 
 
+# =====================================================================
+# CRM ENDPOINTS — إدارة العلاقات
+# =====================================================================
+from engines.crm_engine import CRMEngine
+
+_crm = CRMEngine()
+
+
+@app.post('/crm/leads')
+async def crm_add_lead(body: dict):
+    lead = _crm.add_lead(
+        name=body.get("name", ""),
+        email=body.get("email", ""),
+        phone=body.get("phone", ""),
+        company=body.get("company", ""),
+        source=body.get("source", "manual"),
+        notes=body.get("notes", ""),
+        value_estimate=body.get("value_estimate", ""),
+    )
+    return lead
+
+
+@app.get('/crm/pipeline')
+async def crm_pipeline():
+    return _crm.get_pipeline()
+
+
+@app.get('/crm/leads/{lead_id}')
+async def crm_get_lead(lead_id: str):
+    contact = _crm.get_contact(lead_id)
+    if not contact:
+        raise HTTPException(404, "Lead not found")
+    interactions = _crm.get_interactions(lead_id)
+    return {"contact": contact, "interactions": interactions}
+
+
+@app.post('/crm/leads/{lead_id}/stage')
+async def crm_update_stage(lead_id: str, body: dict):
+    return _crm.update_stage(lead_id, body.get("stage", ""), body.get("reason", ""))
+
+
+@app.post('/crm/leads/{lead_id}/score')
+async def crm_score_lead(lead_id: str):
+    return await _crm.score_lead(lead_id)
+
+
+@app.post('/crm/leads/{lead_id}/outreach')
+async def crm_generate_outreach(lead_id: str, body: dict = {}):
+    return await _crm.generate_outreach(lead_id, body.get("type", "email"))
+
+
+@app.post('/crm/leads/{lead_id}/suggest')
+async def crm_suggest_actions(lead_id: str):
+    return await _crm.suggest_next_actions(lead_id)
+
+
+@app.get('/crm/search')
+async def crm_search(q: str = ""):
+    return {"results": _crm.search(q)}
+
+
+# =====================================================================
+# DIGITAL FACTORY ENDPOINTS — المصانع الرقمية
+# =====================================================================
+from engines.digital_factory import DigitalFactory
+
+_factory = DigitalFactory()
+
+
+@app.post('/factory/content')
+async def factory_content(body: dict):
+    return await _factory.produce_content(
+        topic=body.get("topic", ""),
+        business=body.get("business", ""),
+        platforms=body.get("platforms", ["linkedin", "twitter", "blog"]),
+        tone=body.get("tone", "professional"),
+        language=body.get("language", "ar"),
+    )
+
+
+@app.post('/factory/strategy')
+async def factory_strategy(body: dict):
+    return await _factory.produce_strategy(
+        business=body.get("business", ""),
+        goals=body.get("goals", []),
+        timeframe=body.get("timeframe", "90 days"),
+        constraints=body.get("constraints", []),
+    )
+
+
+@app.post('/factory/analysis')
+async def factory_analysis(body: dict):
+    return await _factory.produce_analysis(
+        business=body.get("business", ""),
+        data_description=body.get("data_description", ""),
+        analysis_goal=body.get("analysis_goal", ""),
+    )
+
+
+@app.post('/factory/product')
+async def factory_product(body: dict):
+    return await _factory.produce_digital_product(
+        product_type=body.get("product_type", "ebook"),
+        topic=body.get("topic", ""),
+        target_audience=body.get("target_audience", ""),
+        business=body.get("business", ""),
+    )
+
+
+@app.post('/factory/fleet-insight')
+async def factory_fleet_insight(body: dict):
+    return await _factory.fleet_insight(body.get("companies", []))
+
+
+@app.get('/factory/stats')
+async def factory_stats():
+    return _factory.get_stats()
+
+
+@app.get('/factory/log')
+async def factory_log():
+    return {"log": _factory.get_production_log()}
+
+
 # static web app
 if Path('web').exists():
     app.mount('/web', StaticFiles(directory='web'), name='web')
