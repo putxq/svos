@@ -35,6 +35,9 @@ from constitution.validator import ConstitutionValidator
 from core.security import verify_api_key
 from billing.auth import verify_api_key as verify_customer_api_key, issue_api_key, list_keys
 from core.config import settings
+from core.tenant import set_tenant, get_customer_id, get_tenant_dir, get_tenant_crm_dir, get_tenant_dna_dir
+from core.activity_log import log_activity, get_recent_activity, get_activity_summary
+from billing.onboarding import onboard_customer, get_onboarding_status
 from core.llm_provider import LLMProvider
 from core.schemas import (
     AgentTaskRequest,
@@ -83,26 +86,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp")
-PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping"}
+PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp", "/my")
+PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status"}
 PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
 
 
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
+    import time as _time
     path = request.url.path
+    start = _time.time()
+    customer_id = ""
 
     if path in PUBLIC_EXACT or any(path.startswith(p) for p in PUBLIC_PREFIXES):
-        return await call_next(request)
+        response = await call_next(request)
+        return response
 
     if any(path.startswith(p) for p in PROTECTED_PREFIXES):
         key = request.headers.get("x-api-key", "")
         auth = verify_customer_api_key(key)
         if not auth.get("ok"):
+            log_activity("", request.method, path, 401, detail=auth.get("reason", ""))
             return JSONResponse(status_code=401, content={"error": "unauthorized", "reason": auth.get("reason", "invalid_api_key")})
         request.state.auth = auth
+        customer_id = auth.get("customer_id", "")
+        # Set tenant context for this request
+        set_tenant(
+            customer_id=customer_id,
+            plan_id=auth.get("plan_id", ""),
+            is_master=auth.get("is_master", False),
+        )
 
-    return await call_next(request)
+    response = await call_next(request)
+    duration_ms = (_time.time() - start) * 1000
+    if customer_id:
+        log_activity(customer_id, request.method, path, response.status_code, duration_ms)
+    return response
 
 
 
@@ -1528,4 +1547,166 @@ async def auth_keys(body: dict):
     if body.get("master_key", "") != os.getenv("SVOS_MASTER_KEY", ""):
         raise HTTPException(401, "invalid master key")
     return {"keys": list_keys()}
+
+
+# ============================================================
+# ONBOARDING ENDPOINTS (Phase 2 - Step 2)
+# ============================================================
+@app.post('/onboard')
+async def onboard(body: dict):
+    """
+    Full customer onboarding in one call.
+    Body: {
+      "customer_id": "cust_abc123",
+      "email": "user@example.com",
+      "plan_id": "starter",
+      "company_name": "My AI Company",
+      "company_description": "Digital marketing agency",
+      "mission": "...", "vision": "...", "values": [...],
+      "industry": "marketing", "country": "Saudi Arabia",
+      "master_key": "..." (required)
+    }
+    """
+    master = body.get("master_key", "")
+    if master != os.getenv("SVOS_MASTER_KEY", ""):
+        raise HTTPException(401, "invalid master key")
+
+    customer_id = body.get("customer_id", "")
+    email = body.get("email", "")
+    if not customer_id or not email:
+        raise HTTPException(400, "customer_id and email required")
+
+    result = onboard_customer(
+        customer_id=customer_id,
+        email=email,
+        plan_id=body.get("plan_id", "starter"),
+        company_name=body.get("company_name", ""),
+        company_description=body.get("company_description", ""),
+        mission=body.get("mission", ""),
+        vision=body.get("vision", ""),
+        values=body.get("values"),
+        industry=body.get("industry", "general"),
+        country=body.get("country", "Saudi Arabia"),
+        risk_appetite=body.get("risk_appetite", "moderate"),
+        payment_ref=body.get("payment_ref", ""),
+    )
+    return result
+
+
+@app.post('/onboard/status')
+async def onboard_status(body: dict):
+    """Check onboarding status for a customer."""
+    customer_id = body.get("customer_id", "")
+    if not customer_id:
+        raise HTTPException(400, "customer_id required")
+    return get_onboarding_status(customer_id)
+
+
+# ============================================================
+# ACTIVITY LOG ENDPOINTS
+# ============================================================
+@app.get('/dashboard/activity')
+async def dashboard_activity(request: Request):
+    """Get recent activity log for the authenticated customer."""
+    auth = getattr(request.state, "auth", {})
+    customer_id = auth.get("customer_id", "")
+    if not customer_id:
+        raise HTTPException(401, "authentication required")
+
+    is_master = auth.get("is_master", False)
+    limit = 50
+
+    if is_master:
+        # master can query any customer
+        from fastapi import Query
+        # default to showing master's own activity
+        pass
+
+    activity = get_recent_activity(customer_id, limit=limit)
+    summary = get_activity_summary(customer_id)
+    return {
+        "success": True,
+        "customer_id": customer_id,
+        "summary": summary,
+        "recent": activity,
+    }
+
+
+# ============================================================
+# TENANT-AWARE CRM ENDPOINTS
+# ============================================================
+@app.post('/my/crm/leads')
+async def my_crm_add_lead(body: dict, request: Request):
+    """Add a lead to MY CRM (tenant-isolated)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    from engines.crm_engine import CRMEngine
+    crm = CRMEngine(data_dir=str(get_tenant_crm_dir(cid)))
+    return crm.add_lead(
+        name=body.get("name", ""),
+        email=body.get("email", ""),
+        phone=body.get("phone", ""),
+        company=body.get("company", ""),
+        source=body.get("source", "manual"),
+        notes=body.get("notes", ""),
+        value_estimate=body.get("value_estimate", ""),
+    )
+
+
+@app.get('/my/crm/pipeline')
+async def my_crm_pipeline(request: Request):
+    """Get MY CRM pipeline (tenant-isolated)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    from engines.crm_engine import CRMEngine
+    crm = CRMEngine(data_dir=str(get_tenant_crm_dir(cid)))
+    return crm.get_pipeline()
+
+
+# ============================================================
+# TENANT-AWARE DNA ENDPOINTS
+# ============================================================
+@app.get('/my/dna/profile')
+async def my_dna_profile(request: Request):
+    """Get MY company DNA (tenant-isolated)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    from engines.company_dna import CompanyDNA
+    dna = CompanyDNA(company_id=cid, data_dir=str(get_tenant_dna_dir(cid)))
+    return dna.get_dna()
+
+
+@app.post('/my/dna/evolve')
+async def my_dna_evolve(request: Request):
+    """Evolve MY company DNA (tenant-isolated)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    from engines.company_dna import CompanyDNA
+    dna = CompanyDNA(company_id=cid, data_dir=str(get_tenant_dna_dir(cid)))
+    return await dna.evolve()
+
+
+# ============================================================
+# ONBOARDING UI
+# ============================================================
+@app.get('/onboard')
+async def onboard_page():
+    """Serve the onboarding wizard UI."""
+    p = Path('web/onboard.html')
+    if p.exists():
+        return FileResponse(str(p))
+    return {'error': 'Onboarding page not found at web/onboard.html'}
+
 

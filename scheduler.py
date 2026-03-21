@@ -1,6 +1,7 @@
 ﻿import asyncio
 import logging
 from datetime import datetime, timedelta
+from pathlib import Path
 
 logger = logging.getLogger("svos.scheduler")
 
@@ -191,11 +192,95 @@ class SVOSScheduler:
     async def _phase_execution(self, previous_phases: dict) -> dict:
         logger.info("[Phase 4] Execution")
         try:
-            _ = previous_phases.get("decision", {})
+            decision = previous_phases.get("decision", {})
+            decision_text = str(decision.get("decision", ""))
+            actions_taken = []
+
+            # ── Auto-execute safe actions based on decision keywords ──
+            # Content generation (safe, no external side effects)
+            if any(kw in decision_text.lower() for kw in ["content", "marketing", "blog", "social", "محتوى", "تسويق"]):
+                try:
+                    from engines.digital_factory import DigitalFactory
+                    factory = DigitalFactory()
+                    result = await factory.produce_content(
+                        topic="AI-powered business automation in Saudi Arabia",
+                        business="SVOS Digital Company",
+                        platforms=["linkedin", "twitter"],
+                        tone="professional",
+                        language="ar",
+                    )
+                    actions_taken.append({
+                        "action": "content_produced",
+                        "status": "done",
+                        "platforms": ["linkedin", "twitter"],
+                        "summary": str(result)[:300],
+                    })
+                except Exception as e:
+                    actions_taken.append({"action": "content_production", "status": "error", "error": str(e)})
+
+            # Market scan (safe, read-only)
+            if any(kw in decision_text.lower() for kw in ["market", "opportunity", "scan", "سوق", "فرص"]):
+                try:
+                    from engines.gravity_engine import GravityEngine
+                    engine = GravityEngine()
+                    result = await engine.find_demand_gravity(
+                        "SME digital transformation Saudi Arabia 2026"
+                    )
+                    actions_taken.append({
+                        "action": "market_scan_deep",
+                        "status": "done",
+                        "summary": str(result)[:300],
+                    })
+                except Exception as e:
+                    actions_taken.append({"action": "market_scan_deep", "status": "error", "error": str(e)})
+
+            # Landing page generation (safe, generates file only)
+            if any(kw in decision_text.lower() for kw in ["landing", "page", "website", "صفحة", "موقع"]):
+                try:
+                    from tools.landing_page_tool import LandingPageTool
+                    lp_tool = LandingPageTool()
+                    result = await lp_tool.execute(
+                        company_name="SVOS Auto-Generated",
+                        headline="Transform Your Business with AI",
+                        subheadline="Autonomous digital operations for Saudi SMEs",
+                        benefits=["Lower cost than hiring", "24/7 operations", "AI-powered decisions"],
+                        cta_text="Start Free",
+                    )
+                    actions_taken.append({
+                        "action": "landing_page_generated",
+                        "status": "done",
+                        "summary": str(result)[:300],
+                    })
+                except Exception as e:
+                    actions_taken.append({"action": "landing_page", "status": "error", "error": str(e)})
+
+            # Daily report generation (always)
+            try:
+                briefing = previous_phases.get("briefing", {}).get("summary", "No briefing")
+                market = previous_phases.get("market_scan", {}).get("opportunities", "No scan")
+                report_content = (
+                    f"SVOS Daily Execution Report - Cycle {self.current_cycle}\n"
+                    f"Briefing: {briefing[:200]}\n"
+                    f"Market: {market[:200]}\n"
+                    f"Decision: {decision_text[:200]}\n"
+                    f"Actions: {len(actions_taken)} executed\n"
+                )
+                report_dir = Path("workspace/daily_reports")
+                report_dir.mkdir(parents=True, exist_ok=True)
+                report_file = report_dir / f"cycle_{self.current_cycle}.txt"
+                report_file.write_text(report_content, encoding="utf-8")
+                actions_taken.append({
+                    "action": "daily_report_saved",
+                    "status": "done",
+                    "file": str(report_file),
+                })
+            except Exception as e:
+                actions_taken.append({"action": "daily_report", "status": "error", "error": str(e)})
+
             return {
                 "status": "done",
-                "actions_taken": [],
-                "note": "Execution phase ready - tools registered but awaiting founder approval for real-world actions",
+                "actions_taken": actions_taken,
+                "total_actions": len(actions_taken),
             }
         except Exception as e:
             logger.error(f"Execution phase error: {e}")

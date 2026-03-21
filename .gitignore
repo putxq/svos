@@ -6,3 +6,7 @@ venv/
 .venv/
 node_modules/
 .DS_Store
+tmp_*
+workspace/tenants/
+workspace/activity_logs/
+logs/
