@@ -1,152 +1,80 @@
 ﻿import os
-import re
 import logging
+import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-logger = logging.getLogger("svos.email_tool")
+logger = logging.getLogger("svos.tools.email")
 
 
 class EmailTool:
-    """
-    يرسل إيميل — يستخدمه CMO, Sales Agent, وأي وكيل يحتاج تواصل.
-    يدعم: نص عادي + HTML.
-    """
+    """Send real emails via SMTP."""
 
-    name = "send_email"
-    description = "Send an email via SMTP (plain text or HTML)"
+    name = "email"
+    description = "Send emails with subject, body, and optional HTML"
+    allowed_roles = ["CEO", "CMO", "COO", "CFO"]
 
     def __init__(self):
-        self.host = os.getenv("SMTP_HOST", "")
-        self.port = int(os.getenv("SMTP_PORT", "587") or "587")
-        self.user = os.getenv("SMTP_USER", "")
-        self.password = os.getenv("SMTP_PASS", "")
-        self.sender = os.getenv("SMTP_FROM", "") or self.user
+        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_user = os.getenv("SMTP_USER", "")
+        self.smtp_pass = os.getenv("SMTP_PASS", "")
+        self.from_email = os.getenv("SMTP_FROM", self.smtp_user)
+        self.configured = bool(self.smtp_user and self.smtp_pass)
 
-    def _validate_email(self, email: str) -> bool:
-        """تحقق بسيط من صيغة الإيميل."""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return bool(re.match(pattern, email.strip()))
+        if self.configured:
+            logger.info("EmailTool initialized with SMTP credentials")
+        else:
+            logger.warning("EmailTool: Missing SMTP credentials - dry-run mode")
 
-    def _check_config(self) -> str | None:
-        """يتحقق إن الإعدادات موجودة ويرجع رسالة خطأ واضحة."""
-        missing = []
-
-        if not self.host:
-            missing.append("SMTP_HOST")
-        if not self.sender:
-            missing.append("SMTP_FROM (or SMTP_USER)")
-
-        if missing:
-            return (
-                f"Missing SMTP settings: {', '.join(missing)}.\n"
-                f"Add to .env:\n"
-                f"  SMTP_HOST=smtp.gmail.com\n"
-                f"  SMTP_PORT=587\n"
-                f"  SMTP_USER=your@email.com\n"
-                f"  SMTP_PASS=your-app-password\n"
-                f"  SMTP_FROM=your@email.com\n"
-                f"\n"
-                f"For Gmail: use App Password from https://myaccount.google.com/apppasswords"
-            )
-
-        return None
-
-    async def execute(
-        self,
-        to: str,
-        subject: str,
-        body: str,
-        html: str | None = None,
-    ) -> dict:
+    def send(self, to: str, subject: str, body: str, html: str = None) -> dict:
         """
-        يرسل إيميل عبر SMTP.
-        - to: عنوان المستلم
-        - subject: الموضوع
-        - body: النص العادي
-        - html: (اختياري) نسخة HTML
+        Send an email.
+
+        Args:
+            to: Recipient email
+            subject: Email subject
+            body: Plain text body
+            html: Optional HTML body
+
+        Returns:
+            dict with status
         """
-        # Check config
-        config_error = self._check_config()
-        if config_error:
-            return {"sent": False, "to": to, "subject": subject, "error": config_error}
-
-        # Validate email
-        if not self._validate_email(to):
-            return {"sent": False, "to": to, "subject": subject, "error": f"Invalid email address: {to}"}
-
-        # Check aiosmtplib
-        try:
-            import aiosmtplib
-        except ImportError:
+        if not self.configured:
+            logger.info(f"[DRY-RUN] Email to {to}: {subject}")
             return {
-                "sent": False,
+                "status": "dry-run",
                 "to": to,
                 "subject": subject,
-                "error": "aiosmtplib not installed. Run: pip install aiosmtplib",
+                "message": "Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM.",
             }
 
         try:
-            # Build message
-            if html:
-                msg = MIMEMultipart("alternative")
-                msg.attach(MIMEText(body, "plain", "utf-8"))
-                msg.attach(MIMEText(html, "html", "utf-8"))
-            else:
-                msg = MIMEText(body, "plain", "utf-8")
-
-            msg["From"] = self.sender
+            msg = MIMEMultipart("alternative")
+            msg["From"] = self.from_email
             msg["To"] = to
             msg["Subject"] = subject
 
-            # Send
-            await aiosmtplib.send(
-                msg,
-                hostname=self.host,
-                port=self.port,
-                username=self.user or None,
-                password=self.password or None,
-                start_tls=True,
-            )
+            msg.attach(MIMEText(body, "plain"))
+            if html:
+                msg.attach(MIMEText(html, "html"))
 
-            logger.info(f"Email sent: to={to}, subject={subject}")
-            return {"sent": True, "to": to, "subject": subject, "error": None}
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_pass)
+                server.send_message(msg)
 
-        except aiosmtplib.SMTPAuthenticationError:
-            return {
-                "sent": False,
-                "to": to,
-                "subject": subject,
-                "error": (
-                    "SMTP authentication failed. Check SMTP_USER and SMTP_PASS.\n"
-                    "For Gmail: use App Password, not your regular password."
-                ),
-            }
-
+            logger.info(f"Email sent to {to} | Subject: {subject}")
+            return {"status": "sent", "to": to, "subject": subject}
         except Exception as e:
-            logger.error(f"Email failed: {e}")
-            return {"sent": False, "to": to, "subject": subject, "error": str(e)}
+            logger.error(f"Email failed to {to}: {e}")
+            return {"status": "error", "to": to, "error": str(e)}
 
-    async def send_report(self, to: str, report_title: str, report_body: str) -> dict:
-        """اختصار لإرسال تقارير الوكلاء."""
-        html = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1a1a2e; color: #00d4ff; padding: 20px; text-align: center;">
-                <h1 style="margin: 0;">SVOS Report</h1>
-                <p style="margin: 5px 0; opacity: 0.8;">{report_title}</p>
-            </div>
-            <div style="padding: 20px; background: #f5f5f5;">
-                <pre style="white-space: pre-wrap; font-size: 14px;">{report_body}</pre>
-            </div>
-            <div style="padding: 10px; text-align: center; color: #888; font-size: 12px;">
-                Sent by SVOS — Sovereign Ventures Operating System
-            </div>
-        </div>
+    def send_bulk(self, recipients: list[dict]) -> list[dict]:
         """
+        Send emails to multiple recipients.
 
-        return await self.execute(
-            to=to,
-            subject=f"[SVOS] {report_title}",
-            body=report_body,
-            html=html,
-        )
+        Args:
+            recipients: list of {'to': '...', 'subject': '...', 'body': '...', 'html': '...(optional)'}
+        """
+        return [self.send(**r) for r in recipients]

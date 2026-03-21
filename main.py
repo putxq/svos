@@ -1061,3 +1061,84 @@ async def root():
     if Path('web/index.html').exists():
         return FileResponse('web/index.html')
     return {'status': 'ok', 'svos': settings.app_version, 'message': 'web/index.html not found'}
+
+# ============================================================
+# TOOL EXECUTION ENDPOINTS (Added by SVOS Tool System)
+# ============================================================
+from tool_registry import build_registry
+
+tool_registry = build_registry()
+
+
+@app.get('/tools/list')
+async def list_tools():
+    return {"tools": tool_registry.list_all()}
+
+
+@app.get('/tools/for-role/{role}')
+async def tools_for_role(role: str):
+    return {"role": role, "tools": tool_registry.get_tools_for_role(role)}
+
+
+@app.post('/tools/execute')
+async def execute_tool(body: dict):
+    tool_name = body.get("tool", "")
+    agent_role = body.get("agent_role", "")
+    method = body.get("method", "")
+    params = body.get("params", {})
+
+    if not all([tool_name, agent_role, method]):
+        raise HTTPException(400, "Required: tool, agent_role, method")
+
+    return tool_registry.execute(tool_name, agent_role, method, **params)
+
+
+@app.post('/tools/whatsapp/send')
+async def send_whatsapp(body: dict):
+    return tool_registry.execute(
+        "whatsapp",
+        body.get("agent_role", "CMO"),
+        "send",
+        to=body.get("to", ""),
+        body=body.get("body", "")
+    )
+
+
+@app.post('/tools/email/send')
+async def send_email(body: dict):
+    return tool_registry.execute(
+        "email",
+        body.get("agent_role", "CMO"),
+        "send",
+        to=body.get("to", ""),
+        subject=body.get("subject", ""),
+        body=body.get("body", ""),
+        html=body.get("html", None)
+    )
+
+
+@app.post('/tools/landing-page/generate')
+async def generate_landing_page(body: dict):
+    return tool_registry.execute(
+        "landing_page",
+        body.get("agent_role", "CMO"),
+        "generate",
+        title=body.get("title", ""),
+        headline=body.get("headline", ""),
+        sub_headline=body.get("sub_headline", ""),
+        cta_text=body.get("cta_text", "Get Started"),
+        cta_link=body.get("cta_link", "#"),
+        features=body.get("features", None),
+        lang=body.get("lang", "ar")
+    )
+
+
+@app.post('/tools/social/post')
+async def social_post(body: dict):
+    return tool_registry.execute(
+        "social_post",
+        body.get("agent_role", "CMO"),
+        "post",
+        content=body.get("content", ""),
+        platform=body.get("platform", "twitter")
+    )

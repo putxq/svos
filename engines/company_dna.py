@@ -1,10 +1,10 @@
-import json
+﻿import json
 import logging
 from datetime import datetime
 from pathlib import Path
 
-from core.llm_provider import LLMProvider
 from core.json_parser import parse_llm_json
+from core.llm_provider import LLMProvider
 
 logger = logging.getLogger("svos.company_dna")
 
@@ -70,7 +70,7 @@ class CompanyDNA:
         if len(self.dna["evolution_log"]) > 100:
             self.dna["evolution_log"] = self.dna["evolution_log"][-100:]
 
-    def initialize(self, name: str, mission: str, vision: str, values: list[str], personality: dict = None) -> dict:
+    def initialize(self, name: str, mission: str, vision: str, values: list[str], personality: dict | None = None) -> dict:
         self.dna["identity"] = {"name": name, "mission": mission, "vision": vision, "values": values}
         if personality:
             self.dna["personality"].update(personality)
@@ -82,6 +82,7 @@ class CompanyDNA:
         self.dna["metrics"]["decisions_made"] += 1
         if success:
             self.dna["metrics"]["successful_decisions"] += 1
+
         pattern = {
             "decision": decision,
             "outcome": outcome,
@@ -91,6 +92,7 @@ class CompanyDNA:
         self.dna["decision_patterns"].append(pattern)
         if len(self.dna["decision_patterns"]) > 50:
             self.dna["decision_patterns"] = self.dna["decision_patterns"][-50:]
+
         self._log_evolution("decision", f"{'Success' if success else 'Fail'}: {decision[:80]}")
         self._save()
 
@@ -107,41 +109,34 @@ class CompanyDNA:
             "and suggest evolution steps. Return ONLY valid JSON."
         )
         user = (
-            f"Company DNA: {json.dumps(self.dna, ensure_ascii=False)}
-
-"
-            "Return JSON:
-"
-            "{"health_score": int, "strengths_identified": [str], "
-            ""areas_to_improve": [str], "personality_adjustments": {}, "
-            ""strategic_recommendations": [str], "next_evolution_steps": [str]}"
+            f"Company DNA: {json.dumps(self.dna, ensure_ascii=False)}\n\n"
+            "Return JSON:\n"
+            '{"health_score": int, "strengths_identified": [str], '
+            '"areas_to_improve": [str], "personality_adjustments": {}, '
+            '"strategic_recommendations": [str], "next_evolution_steps": [str]}'
         )
+
         raw = await self.llm.complete(system, user, max_tokens=2000)
         parsed = parse_llm_json(raw)
+
         self._log_evolution("evolution_analysis", f"Health: {parsed.get('health_score', '?')}")
         if parsed.get("strengths_identified"):
             self.dna["strengths"] = parsed["strengths_identified"]
         if parsed.get("areas_to_improve"):
             self.dna["weaknesses"] = parsed["areas_to_improve"]
         self._save()
+
         return {"company_id": self.company_id, "evolution": parsed}
 
     async def generate_brand_voice(self) -> dict:
-        system = (
-            "Based on this company DNA, create a unique brand voice guide. "
-            "Return ONLY valid JSON."
-        )
+        system = "Based on this company DNA, create a unique brand voice guide. Return ONLY valid JSON."
         user = (
-            f"DNA: {json.dumps(self.dna['identity'], ensure_ascii=False)}
-"
-            f"Personality: {json.dumps(self.dna['personality'], ensure_ascii=False)}
-
-"
-            "Return JSON:
-"
-            "{"brand_voice": str, "tone_words": [str], "avoid_words": [str], "
-            ""sample_tagline": str, "social_media_style": str, "
-            ""email_style": str, "elevator_pitch": str}"
+            f"DNA: {json.dumps(self.dna['identity'], ensure_ascii=False)}\n"
+            f"Personality: {json.dumps(self.dna['personality'], ensure_ascii=False)}\n\n"
+            "Return JSON:\n"
+            '{"brand_voice": str, "tone_words": [str], "avoid_words": [str], '
+            '"sample_tagline": str, "social_media_style": str, '
+            '"email_style": str, "elevator_pitch": str}'
         )
         raw = await self.llm.complete(system, user, max_tokens=1500)
         return {"company_id": self.company_id, "brand": parse_llm_json(raw)}

@@ -1,10 +1,10 @@
-import json
+﻿import json
 import logging
 from datetime import datetime
 from pathlib import Path
 
-from core.llm_provider import LLMProvider
 from core.json_parser import parse_llm_json
+from core.llm_provider import LLMProvider
 
 logger = logging.getLogger("svos.revenue")
 
@@ -32,11 +32,15 @@ class RevenueEngine:
 
     def _save(self):
         self._file().write_text(
-            json.dumps({"streams": self.streams, "updated": datetime.utcnow().isoformat()}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {"streams": self.streams, "updated": datetime.utcnow().isoformat()},
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
 
-    async def discover_streams(self, business: str, current_revenue: str = "", goals: list[str] = None) -> dict:
+    async def discover_streams(self, business: str, current_revenue: str = "", goals: list[str] | None = None) -> dict:
         goals = goals or ["increase revenue"]
         system = (
             "You are a revenue strategist. Analyze this business and discover ALL possible revenue streams. "
@@ -45,28 +49,28 @@ class RevenueEngine:
             "Return ONLY valid JSON."
         )
         user = (
-            f"Business: {business}
-Current revenue: {current_revenue}
-Goals: {json.dumps(goals)}
-
-"
-            "Return JSON:
-"
-            "{"streams": [{"name": str, "type": str, "description": str, "
-            ""revenue_potential": str, "effort_to_launch": str, "time_to_first_revenue": str, "
-            ""confidence": int, "action_steps": [str]}], "
-            ""total_potential": str, "recommended_priority": [str]}"
+            f"Business: {business}\n"
+            f"Current revenue: {current_revenue}\n"
+            f"Goals: {json.dumps(goals)}\n\n"
+            "Return JSON:\n"
+            '{"streams": [{"name": str, "type": str, "description": str, '
+            '"revenue_potential": str, "effort_to_launch": str, "time_to_first_revenue": str, '
+            '"confidence": int, "action_steps": [str]}], '
+            '"total_potential": str, "recommended_priority": [str]}'
         )
         raw = await self.llm.complete(system, user, max_tokens=3000)
         parsed = parse_llm_json(raw)
+
         streams = parsed.get("streams", [])
         for s in streams:
             s["discovered_at"] = datetime.utcnow().isoformat()
             s["status"] = "discovered"
             s["business"] = business
+
         self.streams.extend(streams)
         self._save()
         logger.info(f"Revenue: discovered {len(streams)} streams for {business}")
+
         return {
             "business": business,
             "streams": streams,
@@ -75,75 +79,56 @@ Goals: {json.dumps(goals)}
         }
 
     async def evaluate_stream(self, stream_name: str, business_context: str) -> dict:
-        system = (
-            "You are a revenue analyst. Evaluate this revenue stream deeply. "
-            "Return ONLY valid JSON."
-        )
+        system = "You are a revenue analyst. Evaluate this revenue stream deeply. Return ONLY valid JSON."
         user = (
-            f"Revenue stream: {stream_name}
-Business: {business_context}
-
-"
-            "Return JSON:
-"
-            "{"viability_score": int, "market_size": str, "competitors": [str], "
-            ""pricing_strategy": str, "customer_acquisition_cost": str, "
-            ""lifetime_value": str, "break_even": str, "risks": [str], "
-            ""quick_wins": [str], "long_term_plays": [str]}"
+            f"Revenue stream: {stream_name}\n"
+            f"Business: {business_context}\n\n"
+            "Return JSON:\n"
+            '{"viability_score": int, "market_size": str, "competitors": [str], '
+            '"pricing_strategy": str, "customer_acquisition_cost": str, '
+            '"lifetime_value": str, "break_even": str, "risks": [str], '
+            '"quick_wins": [str], "long_term_plays": [str]}'
         )
         raw = await self.llm.complete(system, user, max_tokens=2000)
-        parsed = parse_llm_json(raw)
-        return {"stream": stream_name, "evaluation": parsed}
+        return {"stream": stream_name, "evaluation": parse_llm_json(raw)}
 
     async def generate_pricing(self, product: str, target_market: str, competitors: str = "") -> dict:
-        system = (
-            "You are a pricing strategist. Create a complete pricing strategy. "
-            "Return ONLY valid JSON."
-        )
+        system = "You are a pricing strategist. Create a complete pricing strategy. Return ONLY valid JSON."
         user = (
-            f"Product: {product}
-Target market: {target_market}
-Competitors: {competitors}
-
-"
-            "Return JSON:
-"
-            "{"pricing_model": str, "tiers": [{"name": str, "price": str, "
-            ""features": [str], "target": str}], "free_tier": bool, "
-            ""annual_discount": str, "enterprise_custom": bool, "
-            ""psychological_tactics": [str], "launch_offer": str}"
+            f"Product: {product}\n"
+            f"Target market: {target_market}\n"
+            f"Competitors: {competitors}\n\n"
+            "Return JSON:\n"
+            '{"pricing_model": str, "tiers": [{"name": str, "price": str, '
+            '"features": [str], "target": str}], "free_tier": bool, '
+            '"annual_discount": str, "enterprise_custom": bool, '
+            '"psychological_tactics": [str], "launch_offer": str}'
         )
         raw = await self.llm.complete(system, user, max_tokens=2000)
-        parsed = parse_llm_json(raw)
-        return {"product": product, "pricing": parsed}
+        return {"product": product, "pricing": parse_llm_json(raw)}
 
     async def forecast(self, business: str, streams: list[str], months: int = 12) -> dict:
         system = (
             "You are a financial forecaster. Create a realistic revenue forecast. "
-            "Be conservative with early months and show growth curve. "
-            "Return ONLY valid JSON."
+            "Be conservative with early months and show growth curve. Return ONLY valid JSON."
         )
         user = (
-            f"Business: {business}
-Revenue streams: {json.dumps(streams)}
-Forecast: {months} months
-
-"
-            "Return JSON:
-"
-            "{"monthly_forecast": [{"month": int, "revenue": str, "streams_breakdown": {}}], "
-            ""total_year": str, "growth_rate": str, "assumptions": [str], "
-            ""best_case": str, "worst_case": str}"
+            f"Business: {business}\n"
+            f"Revenue streams: {json.dumps(streams)}\n"
+            f"Forecast: {months} months\n\n"
+            "Return JSON:\n"
+            '{"monthly_forecast": [{"month": int, "revenue": str, "streams_breakdown": {}}], '
+            '"total_year": str, "growth_rate": str, "assumptions": [str], '
+            '"best_case": str, "worst_case": str}'
         )
         raw = await self.llm.complete(system, user, max_tokens=3000)
-        parsed = parse_llm_json(raw)
-        return {"business": business, "forecast": parsed}
+        return {"business": business, "forecast": parse_llm_json(raw)}
 
     def get_all_streams(self) -> list[dict]:
         return self.streams
 
     def get_summary(self) -> dict:
-        by_status = {}
+        by_status: dict[str, int] = {}
         for s in self.streams:
             st = s.get("status", "discovered")
             by_status[st] = by_status.get(st, 0) + 1
