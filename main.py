@@ -1208,3 +1208,143 @@ async def dashboard_confidence(body: dict):
         return {"success": True, "evaluation": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+# ============================================================
+# BILLING ENDPOINTS (Priority 5 - Economy)
+# ============================================================
+from billing.plans import list_plans, get_plan
+from billing.checkout import get_provider
+from billing.subscriptions import get_subscription_manager
+
+
+@app.get('/billing/plans')
+async def billing_plans():
+    """List all available subscription plans."""
+    return {"success": True, "plans": list_plans()}
+
+
+@app.get('/billing/plan/{plan_id}')
+async def billing_plan_detail(plan_id: str):
+    """Get details of a specific plan."""
+    plan = get_plan(plan_id)
+    return {"success": True, "plan": plan}
+
+
+@app.post('/billing/checkout')
+async def billing_checkout(body: dict):
+    """
+    Create a checkout session.
+    Body:
+    {
+      "plan_id": "professional",
+      "email": "customer@example.com",
+      "region": "international" | "sa",
+      "success_url": "https://...",
+      "cancel_url": "https://..."
+    }
+    """
+    plan_id = body.get("plan_id", "starter")
+    email = body.get("email", "")
+    region = body.get("region", "international")
+    success_url = body.get("success_url", "https://svos.ai/success")
+    cancel_url = body.get("cancel_url", "https://svos.ai/cancel")
+
+    if not email:
+        raise HTTPException(400, "email is required")
+
+    provider = get_provider(region)
+    if region in ("sa", "saudi", "sar", "local"):
+        result = provider.create_payment(plan_id, email, success_url)
+    else:
+        result = provider.create_checkout_session(plan_id, email, success_url, cancel_url)
+
+    return {"success": True, "checkout": result}
+
+
+@app.post('/billing/webhook/stripe')
+async def billing_webhook_stripe(request):
+    """Handle Stripe webhook events."""
+    body = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+
+    provider = get_provider("international")
+    verification = provider.verify_webhook(body, sig)
+
+    if not verification.get("verified"):
+        return {"success": False, "reason": verification.get("reason", "unverified")}
+
+    event = verification["event"]
+    event_type = event.get("type", "")
+
+    if event_type == "checkout.session.completed":
+        session = event["data"]["object"]
+        customer_email = session.get("customer_email", "")
+        plan_id = session.get("metadata", {}).get("plan_id", "starter")
+        customer_id = session.get("customer", session.get("id", ""))
+
+        mgr = get_subscription_manager()
+        result = mgr.provision(customer_id, plan_id, customer_email, payment_ref=session.get("id", ""))
+
+        return {"success": True, "provisioned": True, "result": result}
+
+    return {"success": True, "event_type": event_type, "action": "ignored"}
+
+
+@app.post('/billing/provision')
+async def billing_provision(body: dict):
+    """
+    Manually provision a subscription (for testing or manual sales).
+    Body: {"customer_id": "...", "plan_id": "professional", "email": "..."}
+    """
+    customer_id = body.get("customer_id", "")
+    plan_id = body.get("plan_id", "starter")
+    email = body.get("email", "")
+
+    if not customer_id or not email:
+        raise HTTPException(400, "customer_id and email required")
+
+    mgr = get_subscription_manager()
+    result = mgr.provision(customer_id, plan_id, email)
+    return {"success": True, "result": result}
+
+
+@app.get('/billing/subscription/{customer_id}')
+async def billing_subscription(customer_id: str):
+    """Get subscription status for a customer."""
+    mgr = get_subscription_manager()
+    return mgr.get_subscription(customer_id)
+
+
+@app.post('/billing/check-limit')
+async def billing_check_limit(body: dict):
+    """
+    Check if a customer can use a resource.
+    Body: {"customer_id": "...", "resource": "cycle" | "api_call" | "tool:whatsapp"}
+    """
+    customer_id = body.get("customer_id", "")
+    resource = body.get("resource", "")
+
+    if not customer_id or not resource:
+        raise HTTPException(400, "customer_id and resource required")
+
+    mgr = get_subscription_manager()
+    return mgr.check_limit(customer_id, resource)
+
+
+@app.post('/billing/record-usage')
+async def billing_record_usage(body: dict):
+    """Record usage for metering."""
+    customer_id = body.get("customer_id", "")
+    resource = body.get("resource", "")
+    amount = body.get("amount", 1)
+
+    mgr = get_subscription_manager()
+    return mgr.record_usage(customer_id, resource, amount)
+
+
+@app.get('/billing/customers')
+async def billing_customers():
+    """List all subscriptions (admin)."""
+    mgr = get_subscription_manager()
+    subs = mgr.list_all()
+    return {"success": True, "total": len(subs), "customers": subs}

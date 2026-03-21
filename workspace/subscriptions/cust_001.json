@@ -1,0 +1,35 @@
+{
+  "customer_id": "cust_001",
+  "email": "test@svos.ai",
+  "plan_id": "professional",
+  "plan_name": "Professional",
+  "status": "active",
+  "payment_ref": "dry_run_123",
+  "provisioned_at": 1774068972.9777188,
+  "expires_at": 1776660972.9777188,
+  "limits": {
+    "agents": 7,
+    "cycles_per_day": 6,
+    "tools_enabled": [
+      "email",
+      "landing_page",
+      "whatsapp",
+      "social_post"
+    ],
+    "companies": 3,
+    "storage_mb": 2000,
+    "api_calls_per_day": 500
+  },
+  "usage_today": {
+    "cycles": 2,
+    "api_calls": 0,
+    "tools_used": 0,
+    "date": "2026-03-21"
+  },
+  "total_usage": {
+    "cycles": 2,
+    "api_calls": 0,
+    "tools_used": 0
+  },
+  "is_expired": false
+}
