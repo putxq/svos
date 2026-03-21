@@ -347,6 +347,10 @@ class LLMProvider:
     الافتراضي: anthropic (Claude) — الأقوى والموصى به.
     المدعوم: anthropic, openai, gemini, ollama.
     المستخدم يختار بحرية — ما نفرض شيء.
+
+    BYOK Mode: If a tenant has configured their own LLM key,
+    we use it instead of the global key. SVOS is the car,
+    the customer brings the fuel.
     """
 
     # Map aliases to canonical names
@@ -361,8 +365,26 @@ class LLMProvider:
         "local": "ollama",
     }
 
-    def __init__(self, provider: str | None = None):
-        raw_name = (provider or self._env("LLM_PROVIDER") or "anthropic").lower().strip()
+    def __init__(self, provider: str | None = None, tenant_config: dict | None = None):
+        # ── BYOK: Try tenant config first ──
+        if tenant_config is None and provider is None:
+            try:
+                from core.tenant_llm_config import load_llm_config
+                tenant_config = load_llm_config()
+            except Exception:
+                tenant_config = None
+
+        if tenant_config and tenant_config.get("provider"):
+            # Customer's own key
+            raw_name = tenant_config["provider"].lower().strip()
+            self._tenant_config = tenant_config
+            self._source = "tenant"
+        else:
+            # Global / env fallback
+            raw_name = (provider or self._env("LLM_PROVIDER") or "anthropic").lower().strip()
+            self._tenant_config = None
+            self._source = "global"
+
         self.provider_name = self.PROVIDER_ALIASES.get(raw_name, raw_name)
 
         if self.provider_name not in ("anthropic", "openai", "gemini", "ollama"):
@@ -381,6 +403,7 @@ class LLMProvider:
                 "provider": self.provider_name,
                 "adapter": self.adapter.name,
                 "model": getattr(self.adapter, "model", "unknown"),
+                "source": self._source,
             })
         )
 
@@ -396,29 +419,30 @@ class LLMProvider:
 
     def _build_adapter(self) -> LLMAdapter:
         p = self.provider_name
+        tc = self._tenant_config  # None if using global
 
         if p == "anthropic":
             return AnthropicAdapter(
-                api_key=self._env("ANTHROPIC_API_KEY"),
-                model=self._env("ANTHROPIC_MODEL") or "claude-haiku-4-5-20251001",
+                api_key=(tc or {}).get("api_key") or self._env("ANTHROPIC_API_KEY"),
+                model=(tc or {}).get("model") or self._env("ANTHROPIC_MODEL") or "claude-haiku-4-5-20251001",
             )
 
         if p == "openai":
             return OpenAIAdapter(
-                api_key=self._env("OPENAI_API_KEY"),
-                model=self._env("OPENAI_MODEL") or "gpt-4o-mini",
+                api_key=(tc or {}).get("api_key") or self._env("OPENAI_API_KEY"),
+                model=(tc or {}).get("model") or self._env("OPENAI_MODEL") or "gpt-4o-mini",
             )
 
         if p == "gemini":
             return GeminiAdapter(
-                api_key=self._env("GEMINI_API_KEY"),
-                model=self._env("GEMINI_MODEL") or "gemini-2.0-flash",
+                api_key=(tc or {}).get("api_key") or self._env("GEMINI_API_KEY"),
+                model=(tc or {}).get("model") or self._env("GEMINI_MODEL") or "gemini-2.0-flash",
             )
 
         if p == "ollama":
             return OllamaAdapter(
-                base_url=self._env("OLLAMA_BASE_URL") or "http://localhost:11434",
-                model=self._env("OLLAMA_MODEL") or "llama3.2:3b",
+                base_url=(tc or {}).get("ollama_base_url") or self._env("OLLAMA_BASE_URL") or "http://localhost:11434",
+                model=(tc or {}).get("model") or self._env("OLLAMA_MODEL") or "llama3.2:3b",
             )
 
         raise ValueError(f"No adapter for provider: {p}")

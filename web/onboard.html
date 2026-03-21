@@ -98,6 +98,7 @@ body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:va
     <div class="progress-step" id="prog-2"></div>
     <div class="progress-step" id="prog-3"></div>
     <div class="progress-step" id="prog-4"></div>
+    <div class="progress-step" id="prog-5"></div>
   </div>
 
   <div class="error-msg" id="error-msg"></div>
@@ -174,8 +175,42 @@ body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:va
     </div>
   </div>
 
-  <!-- STEP 3: Plan -->
+  <!-- STEP 3: LLM Provider (BYOK) -->
   <div class="step" id="step-3">
+    <div class="step-title">اختر محرك الذكاء</div>
+    <div class="step-subtitle">SVOS هو السيارة — أنت تختار البنزين. اربط مفتاح API الخاص بك من أي مزود</div>
+    <div class="plan-grid" id="provider-grid"></div>
+    <div id="llm-config-fields" style="display:none;margin-top:24px;">
+      <div class="field">
+        <label id="llm-key-label">مفتاح API</label>
+        <input type="password" id="f-llm-key" placeholder="sk-ant-..." dir="ltr" />
+        <div style="font-size:0.75rem;color:var(--text2);margin-top:4px">
+          <span id="llm-key-hint">احصل على مفتاحك من</span>
+          <a id="llm-key-link" href="#" target="_blank" style="color:var(--accent)">هنا</a>
+        </div>
+      </div>
+      <div class="field">
+        <label>الموديل</label>
+        <select id="f-llm-model" dir="ltr"></select>
+      </div>
+      <div id="ollama-url-field" style="display:none;" class="field">
+        <label>Ollama URL</label>
+        <input id="f-ollama-url" value="http://localhost:11434" dir="ltr" />
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px;font-size:0.8rem;color:var(--text2);line-height:1.8">
+      ⚡ مفتاحك يُحفظ مشفرًا في workspace خاص بك فقط<br>
+      ⚡ يمكنك تغيير المزود لاحقًا من لوحة التحكم<br>
+      ⚡ بدون مفتاح LLM لن يتمكن الوكلاء من التفكير أو التنفيذ
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goStep(4)">التالي</button>
+      <button class="btn btn-secondary" onclick="goStep(2)">رجوع</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Plan -->
+  <div class="step" id="step-4">
     <div class="step-title">اختر خطتك</div>
     <div class="step-subtitle">كل خطة تحدد عدد الوكلاء، الأدوات، والدورات المستقلة يوميًا</div>
     <div class="plan-grid">
@@ -212,7 +247,7 @@ body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:va
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="doOnboard()">تفعيل شركتي</button>
-      <button class="btn btn-secondary" onclick="goStep(2)">رجوع</button>
+      <button class="btn btn-secondary" onclick="goStep(3)">رجوع</button>
     </div>
   </div>
 
@@ -223,8 +258,8 @@ body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:va
     <div style="color:var(--text2);font-size:0.8rem;margin-top:8px">إنشاء الاشتراك · إصدار مفتاح API · تهيئة DNA الشركة</div>
   </div>
 
-  <!-- STEP 4: Success -->
-  <div class="step" id="step-4">
+  <!-- STEP 5: Success -->
+  <div class="step" id="step-5">
     <div class="success-box">
       <div class="success-icon">✅</div>
       <div class="step-title" style="font-size:1.4rem">شركتك الرقمية جاهزة!</div>
@@ -248,11 +283,90 @@ body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:va
 <script>
 const API = window.location.origin;
 let selectedPlan = 'professional';
+let selectedProvider = '';
+let providersData = [];
 let onboardResult = null;
+
+// Load LLM providers on page load
+(async function loadProviders() {
+  try {
+    const res = await fetch(API + '/llm/providers');
+    const data = await res.json();
+    providersData = data.providers || [];
+    renderProviders();
+  } catch(e) {
+    console.error('Failed to load providers:', e);
+    // Fallback
+    providersData = [
+      {id:'anthropic',name:'Claude (Anthropic)',name_ar:'كلود (Anthropic)',models:['claude-haiku-4-5-20251001','claude-sonnet-4-20250514'],default_model:'claude-haiku-4-5-20251001',key_prefix:'sk-ant-',get_key_url:'https://console.anthropic.com',recommended:true},
+      {id:'openai',name:'GPT (OpenAI)',name_ar:'جي بي تي (OpenAI)',models:['gpt-4o-mini','gpt-4o'],default_model:'gpt-4o-mini',key_prefix:'sk-',get_key_url:'https://platform.openai.com/api-keys',recommended:false},
+      {id:'gemini',name:'Gemini (Google)',name_ar:'جيمناي (Google)',models:['gemini-2.0-flash','gemini-2.5-flash'],default_model:'gemini-2.0-flash',key_prefix:'AI',get_key_url:'https://aistudio.google.com/apikey',recommended:false},
+      {id:'ollama',name:'Ollama (Local)',name_ar:'أولاما (محلي)',models:['llama3.2:3b','llama3.1:8b'],default_model:'llama3.2:3b',key_prefix:'',get_key_url:'https://ollama.com',recommended:false},
+    ];
+    renderProviders();
+  }
+})();
+
+function renderProviders() {
+  const grid = document.getElementById('provider-grid');
+  grid.innerHTML = '';
+  providersData.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'plan-card' + (p.recommended ? ' selected' : '');
+    card.onclick = () => selectProvider(p.id, card);
+    card.innerHTML = `
+      <div class="plan-name">${p.name_ar || p.name}</div>
+      <div style="font-size:0.8rem;color:var(--text2);margin:4px 0">${p.name}</div>
+      ${p.recommended ? '<div style="font-size:0.7rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:99px;display:inline-block;margin-top:4px">موصى به</div>' : ''}
+      ${p.note ? '<div style="font-size:0.7rem;color:var(--gold);margin-top:6px">' + p.note + '</div>' : ''}
+    `;
+    grid.appendChild(card);
+  });
+  // Auto-select recommended
+  const rec = providersData.find(p => p.recommended);
+  if (rec) selectProvider(rec.id, grid.querySelector('.selected'));
+}
+
+function selectProvider(id, el) {
+  selectedProvider = id;
+  document.querySelectorAll('#provider-grid .plan-card').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+
+  const p = providersData.find(x => x.id === id);
+  if (!p) return;
+
+  const fields = document.getElementById('llm-config-fields');
+  fields.style.display = 'block';
+
+  // Key field
+  if (id === 'ollama') {
+    document.getElementById('f-llm-key').style.display = 'none';
+    document.getElementById('llm-key-label').style.display = 'none';
+    document.getElementById('llm-key-hint').parentElement.style.display = 'none';
+    document.getElementById('ollama-url-field').style.display = 'block';
+  } else {
+    document.getElementById('f-llm-key').style.display = '';
+    document.getElementById('llm-key-label').style.display = '';
+    document.getElementById('llm-key-hint').parentElement.style.display = '';
+    document.getElementById('ollama-url-field').style.display = 'none';
+    document.getElementById('f-llm-key').placeholder = p.key_prefix + '...';
+    document.getElementById('llm-key-link').href = p.get_key_url;
+  }
+
+  // Model select
+  const sel = document.getElementById('f-llm-model');
+  sel.innerHTML = '';
+  (p.models || []).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    if (m === p.default_model) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
 
 function selectPlan(plan, el) {
   selectedPlan = plan;
-  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('#step-4 .plan-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
 }
 
@@ -270,11 +384,21 @@ function goStep(n) {
       return;
     }
   }
+  if (n === 4) {
+    if (!selectedProvider) {
+      showError('اختر مزود الذكاء الاصطناعي');
+      return;
+    }
+    if (selectedProvider !== 'ollama' && !document.getElementById('f-llm-key').value) {
+      showError('مفتاح API مطلوب');
+      return;
+    }
+  }
 
   hideError();
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const p = document.getElementById('prog-' + i);
     p.classList.remove('active', 'done');
     if (i < n) p.classList.add('done');
@@ -310,6 +434,10 @@ async function doOnboard() {
     vision: document.getElementById('f-vision').value.trim(),
     values: ["quality", "innovation", "trust"],
     country: "Saudi Arabia",
+    llm_provider: selectedProvider,
+    llm_api_key: document.getElementById('f-llm-key').value.trim(),
+    llm_model: document.getElementById('f-llm-model').value,
+    ollama_base_url: document.getElementById('f-ollama-url').value.trim(),
   };
 
   try {
@@ -324,7 +452,7 @@ async function doOnboard() {
 
     if (!res.ok || !data.success) {
       showError(data.detail || data.error || 'حدث خطأ أثناء التسجيل');
-      goStep(3);
+      goStep(4);
       return;
     }
 
@@ -339,11 +467,11 @@ async function doOnboard() {
       list.appendChild(li);
     });
 
-    goStep(4);
+    goStep(5);
   } catch (e) {
     document.getElementById('loading-state').style.display = 'none';
     showError('خطأ في الاتصال: ' + e.message);
-    goStep(3);
+    goStep(4);
   }
 }
 

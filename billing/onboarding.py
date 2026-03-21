@@ -27,6 +27,10 @@ def onboard_customer(
     country: str = "Saudi Arabia",
     risk_appetite: str = "moderate",
     payment_ref: str = "",
+    llm_provider: str = "",
+    llm_api_key: str = "",
+    llm_model: str = "",
+    ollama_base_url: str = "http://localhost:11434",
 ) -> dict:
     """
     Complete onboarding in one call.
@@ -53,7 +57,27 @@ def onboard_customer(
     workspace = init_tenant_workspace(customer_id)
     logger.info(f"[onboard] Workspace created: {workspace['workspace']}")
 
-    # ── Step 4: Init Company DNA ──
+    # ── Step 4: Save LLM config (BYOK) ──
+    llm_result = {}
+    if llm_provider:
+        try:
+            from core.tenant_llm_config import save_llm_config
+            llm_result = save_llm_config(
+                customer_id=customer_id,
+                provider=llm_provider,
+                api_key=llm_api_key,
+                model=llm_model,
+                ollama_base_url=ollama_base_url,
+            )
+            if llm_result.get("success"):
+                logger.info(f"[onboard] LLM config saved: {llm_provider} for {customer_id}")
+            else:
+                errors.append(f"LLM config: {llm_result.get('error', 'unknown')}")
+        except Exception as e:
+            errors.append(f"LLM config failed: {str(e)}")
+            logger.warning(f"[onboard] LLM config error: {e}")
+
+    # ── Step 5: Init Company DNA ──
     dna_result = {}
     try:
         from engines.company_dna import CompanyDNA
@@ -78,7 +102,7 @@ def onboard_customer(
         errors.append(f"DNA init failed: {str(e)}")
         logger.warning(f"[onboard] DNA init error: {e}")
 
-    # ── Step 5: Build onboarding summary ──
+    # ── Step 6: Build onboarding summary ──
     plan_details = sub_result.get("subscription", {})
 
     return {
@@ -91,6 +115,7 @@ def onboard_customer(
             "limits": plan_details.get("limits", {}),
         },
         "api_key": api_key,
+        "llm": llm_result if llm_result else {"status": "not_configured", "message": "Add your LLM key later in settings"},
         "workspace": workspace,
         "company_dna": dna_result if dna_result else {"status": "skipped"},
         "company_name": company_name,
@@ -100,6 +125,11 @@ def onboard_customer(
             "Open the dashboard to configure your AI company",
             "Chat with your CEO agent to set strategic direction",
             "Run your first autonomous cycle from the scheduler panel",
+        ] if llm_provider else [
+            "Save your API key securely — it won't be shown again",
+            "Add your LLM API key (Claude, GPT, Gemini, or Ollama)",
+            "Open the dashboard to configure your AI company",
+            "Chat with your CEO agent to set strategic direction",
         ],
         "errors": errors,
         "onboarded_at": time.time(),
@@ -110,6 +140,7 @@ def get_onboarding_status(customer_id: str) -> dict:
     """Check what's been set up for a customer."""
     from billing.subscriptions import get_subscription_manager
     from core.tenant import get_tenant_dir
+    from core.tenant_llm_config import get_llm_status
     from pathlib import Path
 
     mgr = get_subscription_manager()
@@ -122,10 +153,15 @@ def get_onboarding_status(customer_id: str) -> dict:
     dna_file = tenant_dir / "dna" / f"{customer_id}_dna.json"
     has_dna = dna_file.exists()
 
+    llm_status = get_llm_status(customer_id)
+    has_llm = llm_status.get("configured", False)
+
     return {
         "customer_id": customer_id,
         "subscription": has_subscription,
         "workspace": has_workspace,
         "company_dna": has_dna,
-        "fully_onboarded": all([has_subscription, has_workspace, has_dna]),
+        "llm_configured": has_llm,
+        "llm_details": llm_status,
+        "fully_onboarded": all([has_subscription, has_workspace, has_dna, has_llm]),
     }

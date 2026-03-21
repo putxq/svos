@@ -87,7 +87,7 @@ app.add_middleware(
 )
 
 PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp", "/my")
-PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status"}
+PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers"}
 PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
 
 
@@ -1564,6 +1564,7 @@ async def onboard(body: dict):
       "company_description": "Digital marketing agency",
       "mission": "...", "vision": "...", "values": [...],
       "industry": "marketing", "country": "Saudi Arabia",
+      "llm_provider": "anthropic", "llm_api_key": "sk-ant-...", "llm_model": "claude-haiku-4-5-20251001",
       "master_key": "..." (required)
     }
     """
@@ -1589,6 +1590,10 @@ async def onboard(body: dict):
         country=body.get("country", "Saudi Arabia"),
         risk_appetite=body.get("risk_appetite", "moderate"),
         payment_ref=body.get("payment_ref", ""),
+        llm_provider=body.get("llm_provider", ""),
+        llm_api_key=body.get("llm_api_key", ""),
+        llm_model=body.get("llm_model", ""),
+        ollama_base_url=body.get("ollama_base_url", "http://localhost:11434"),
     )
     return result
 
@@ -1600,6 +1605,102 @@ async def onboard_status(body: dict):
     if not customer_id:
         raise HTTPException(400, "customer_id required")
     return get_onboarding_status(customer_id)
+
+
+# ============================================================
+# LLM CONFIGURATION ENDPOINTS (BYOK - Bring Your Own Key)
+# ============================================================
+from core.tenant_llm_config import (
+    save_llm_config, load_llm_config, get_llm_status,
+    delete_llm_config, list_providers as list_llm_providers,
+)
+
+
+@app.get('/llm/providers')
+async def llm_providers():
+    """List available LLM providers with details for UI."""
+    return {"success": True, "providers": list_llm_providers()}
+
+
+@app.post('/my/llm/configure')
+async def my_llm_configure(body: dict, request: Request):
+    """
+    Set or update LLM provider and API key for authenticated customer.
+    Body: {"provider": "anthropic", "api_key": "sk-ant-...", "model": "claude-haiku-4-5-20251001"}
+    """
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    provider = body.get("provider", "")
+    if not provider:
+        raise HTTPException(400, "provider is required")
+
+    result = save_llm_config(
+        customer_id=cid,
+        provider=provider,
+        api_key=body.get("api_key", ""),
+        model=body.get("model", ""),
+        ollama_base_url=body.get("ollama_base_url", "http://localhost:11434"),
+    )
+    if not result.get("success"):
+        raise HTTPException(400, result.get("error", "Failed to save LLM config"))
+    return result
+
+
+@app.get('/my/llm/status')
+async def my_llm_status(request: Request):
+    """Check LLM configuration status for authenticated customer."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    return get_llm_status(cid)
+
+
+@app.delete('/my/llm/configure')
+async def my_llm_delete(request: Request):
+    """Remove LLM config (to reconfigure)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    return delete_llm_config(cid)
+
+
+@app.post('/my/llm/test')
+async def my_llm_test(request: Request):
+    """Test the customer's LLM configuration with a simple prompt."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    config = load_llm_config(cid)
+    if not config:
+        return {"success": False, "error": "No LLM configured. Use /my/llm/configure first."}
+
+    try:
+        llm = LLMProvider(tenant_config=config)
+        response = await llm.complete(
+            system_prompt="You are a helpful assistant. Reply in 1 sentence.",
+            user_message="Say hello and confirm you are working.",
+            max_tokens=100,
+        )
+        return {
+            "success": True,
+            "provider": config["provider"],
+            "model": config.get("model", ""),
+            "response": response,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "provider": config["provider"],
+            "error": str(e),
+            "hint": "Check your API key and try again.",
+        }
 
 
 # ============================================================
