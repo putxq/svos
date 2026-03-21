@@ -1,4 +1,5 @@
 ﻿from pathlib import Path
+import json
 import os
 import asyncio
 from contextlib import asynccontextmanager
@@ -87,7 +88,7 @@ app.add_middleware(
 )
 
 PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp", "/my")
-PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries"}
+PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries", "/meetings/types"}
 PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
 
 
@@ -2167,6 +2168,242 @@ async def my_quality_check(body: dict, request: Request):
         result = check_quality(content, content_type)
 
     return {"success": True, "quality": result}
+
+
+# ============================================================
+# MEETING ENDPOINTS (Phase 5 — The Company Meets)
+# ============================================================
+from engines.meeting_engine import MeetingEngine, MEETING_TYPES, HIERARCHY, save_meeting, list_meetings
+
+
+@app.post('/my/meetings/run')
+async def my_run_meeting(body: dict, request: Request):
+    """
+    Run a corporate meeting.
+    Body: {
+      "type": "executive_standup" | "board_meeting" | "strategy_session" | "crisis_meeting" | "department_review",
+      "agenda": ["topic 1", "topic 2"],
+      "context": {},
+      "department": "" (for department_review only)
+    }
+    """
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    meeting_type = body.get("type", "executive_standup")
+    agenda = body.get("agenda", [])
+
+    if meeting_type not in MEETING_TYPES:
+        raise HTTPException(400, f"Unknown meeting type. Available: {list(MEETING_TYPES.keys())}")
+    if not agenda:
+        raise HTTPException(400, "agenda is required (list of topics)")
+
+    engine = MeetingEngine()
+    state = get_company_state(cid)
+    result = await engine.run_meeting(
+        meeting_type=meeting_type,
+        agenda=agenda,
+        context=body.get("context", {}),
+        company_state=state.state,
+        department=body.get("department", ""),
+    )
+
+    save_meeting(cid, result)
+
+    # Record decisions in Company State
+    for decision in result.get("action_items", []):
+        state.record_decision(
+            decision=decision.get("description", ""),
+            agent=result.get("chair", "CEO"),
+            expected_outcome="Meeting action item",
+        )
+
+    return {"success": True, "meeting": result}
+
+
+@app.get('/my/meetings')
+async def my_list_meetings(request: Request):
+    """List recent meetings."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    return {"success": True, "meetings": list_meetings(cid)}
+
+
+@app.get('/my/meetings/{meeting_id}')
+async def my_get_meeting(meeting_id: str, request: Request):
+    """Get full meeting details including minutes."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    path = get_tenant_dir(cid) / "meetings" / f"{meeting_id}.json"
+    if not path.exists():
+        raise HTTPException(404, "Meeting not found")
+    return {"success": True, "meeting": json.loads(path.read_text("utf-8"))}
+
+
+@app.get('/meetings/types')
+async def meeting_types():
+    """List available meeting types (public)."""
+    return {"success": True, "types": {
+        k: {"name": v["name"], "name_ar": v["name_ar"], "frequency": v["frequency"], "purpose": v.get("purpose", "")}
+        for k, v in MEETING_TYPES.items()
+    }}
+
+
+@app.post('/my/meetings/review')
+async def my_performance_review(body: dict, request: Request):
+    """Run a performance review: reviewer evaluates reviewee."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    reviewer = body.get("reviewer", "CEO")
+    reviewee = body.get("reviewee", "")
+    if not reviewee:
+        raise HTTPException(400, "reviewee is required")
+
+    state = get_company_state(cid)
+    engine = MeetingEngine()
+    result = await engine.performance_review(
+        reviewer=reviewer, reviewee=reviewee,
+        kpis=state.state.get("kpis", {}),
+        company_state=state.state,
+    )
+    return {"success": True, "review": result}
+
+
+@app.get('/my/org-chart')
+async def my_org_chart(request: Request):
+    """Get organizational chart with hierarchy."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    from engines.hr_engine import HREngine
+    hr = HREngine(customer_id=cid)
+    return {"success": True, "org_chart": hr.get_org_chart(), "hierarchy": HIERARCHY}
+
+
+# ============================================================
+# HR ENDPOINTS (Phase 7 — The Company Hires)
+# ============================================================
+from engines.hr_engine import HREngine, SPAWNABLE_ROLES
+
+
+@app.get('/my/hr/roster')
+async def my_hr_roster(request: Request):
+    """List all hired agents."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    hr = HREngine(customer_id=cid)
+    return {"success": True, "roster": hr.get_roster()}
+
+
+@app.get('/my/hr/available-roles')
+async def my_hr_available_roles(request: Request):
+    """List roles available for hiring."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    return {"success": True, "roles": {
+        k: {"title": v["title"], "title_ar": v["title_ar"], "department": v["department"], "skills": v["skills"]}
+        for k, v in SPAWNABLE_ROLES.items()
+    }}
+
+
+@app.post('/my/hr/hire')
+async def my_hr_hire(body: dict, request: Request):
+    """Hire a new agent. Body: {"role": "content_writer", "name": "optional", "prompt": "optional"}"""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    role = body.get("role", "")
+    if not role:
+        raise HTTPException(400, "role is required")
+
+    hr = HREngine(customer_id=cid)
+    result = hr.hire(
+        role=role,
+        custom_name=body.get("name", ""),
+        custom_prompt=body.get("prompt", ""),
+    )
+    if not result.get("success"):
+        raise HTTPException(400, result.get("error", "Hire failed"))
+    return result
+
+
+@app.post('/my/hr/fire')
+async def my_hr_fire(body: dict, request: Request):
+    """Terminate an agent. Body: {"agent_id": "...", "reason": "..."}"""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    agent_id = body.get("agent_id", "")
+    if not agent_id:
+        raise HTTPException(400, "agent_id required")
+
+    hr = HREngine(customer_id=cid)
+    return hr.fire(agent_id, body.get("reason", ""))
+
+
+@app.post('/my/hr/assign-task')
+async def my_hr_assign_task(body: dict, request: Request):
+    """Assign task to a hired agent."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    hr = HREngine(customer_id=cid)
+    return hr.assign_task(body.get("agent_id", ""), body.get("task", ""))
+
+
+@app.post('/my/hr/evaluate')
+async def my_hr_evaluate(body: dict, request: Request):
+    """Evaluate an agent's performance."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    hr = HREngine(customer_id=cid)
+    return await hr.evaluate(body.get("agent_id", ""))
+
+
+@app.post('/my/hr/recommend')
+async def my_hr_recommend(request: Request):
+    """CHRO recommends hiring based on company needs."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    hr = HREngine(customer_id=cid)
+    state = get_company_state(cid)
+
+    bp = None
+    try:
+        from engines.blueprint_engine import load_blueprint
+        bp = load_blueprint(cid)
+    except Exception:
+        pass
+
+    return await hr.recommend_hiring(company_state=state.state, blueprint=bp)
+
 
 
 
