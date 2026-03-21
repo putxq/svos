@@ -1,13 +1,14 @@
 ﻿from pathlib import Path
+import os
 import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from agents.ceo.agent import CEOAgent
 from assembly_lines.content_line import run_content_line
@@ -32,6 +33,7 @@ from aurora_x.sphere_manager import SphereManager
 from aurora_x.trust_engine import TrustEngine
 from constitution.validator import ConstitutionValidator
 from core.security import verify_api_key
+from billing.auth import verify_api_key as verify_customer_api_key, issue_api_key, list_keys
 from core.config import settings
 from core.llm_provider import LLMProvider
 from core.schemas import (
@@ -80,6 +82,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp")
+PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping"}
+PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
+
+
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next):
+    path = request.url.path
+
+    if path in PUBLIC_EXACT or any(path.startswith(p) for p in PUBLIC_PREFIXES):
+        return await call_next(request)
+
+    if any(path.startswith(p) for p in PROTECTED_PREFIXES):
+        key = request.headers.get("x-api-key", "")
+        auth = verify_customer_api_key(key)
+        if not auth.get("ok"):
+            return JSONResponse(status_code=401, content={"error": "unauthorized", "reason": auth.get("reason", "invalid_api_key")})
+        request.state.auth = auth
+
+    return await call_next(request)
+
 
 
 class ContentLineRequest(BaseModel):
@@ -1472,4 +1496,36 @@ async def a2a_list_tasks():
     handler = get_a2a_handler()
     return {"tasks": handler.list_tasks()}
 
+
+
+
+# ============================================================
+# AUTH ENDPOINTS (Phase 2 - simple API key auth)
+# ============================================================
+@app.post('/auth/issue-key')
+async def auth_issue_key(body: dict):
+    customer_id = body.get("customer_id", "")
+    label = body.get("label", "default")
+    master = body.get("master_key", "")
+
+    if master != os.getenv("SVOS_MASTER_KEY", ""):
+        raise HTTPException(401, "invalid master key")
+    if not customer_id:
+        raise HTTPException(400, "customer_id required")
+
+    issued = issue_api_key(customer_id=customer_id, label=label)
+    return {"success": True, "issued": issued}
+
+
+@app.get('/auth/ping')
+async def auth_ping(request: Request):
+    auth = getattr(request.state, "auth", None)
+    return {"ok": True, "auth": auth or {"public": True}}
+
+
+@app.get('/auth/keys')
+async def auth_keys(body: dict):
+    if body.get("master_key", "") != os.getenv("SVOS_MASTER_KEY", ""):
+        raise HTTPException(401, "invalid master key")
+    return {"keys": list_keys()}
 

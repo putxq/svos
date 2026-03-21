@@ -82,13 +82,26 @@ a { color: var(--accent); text-decoration: none; }
 </div>
 <script>
 const API = window.location.origin;
+let SVOS_API_KEY = localStorage.getItem("svos_api_key") || "";
 async function api(path, method='GET', body=null) {
   const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (SVOS_API_KEY) opts.headers['x-api-key'] = SVOS_API_KEY;
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(API + path, opts);
   return r.json();
 }
+
+function ensureApiKey() {
+  if (SVOS_API_KEY) return true;
+  const entered = prompt('Enter your SVOS API key');
+  if (!entered) return false;
+  SVOS_API_KEY = entered.trim();
+  localStorage.setItem('svos_api_key', SVOS_API_KEY);
+  return !!SVOS_API_KEY;
+}
+
 async function loadOverview() {
+  if (!ensureApiKey()) { document.getElementById('sys-status').textContent = 'Missing API key'; return; }
   try {
     const d = await api('/dashboard/overview');
     const totalAgents = d?.system?.total_agents ?? d?.agents_total ?? 0;
