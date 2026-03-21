@@ -888,8 +888,13 @@ async def dna_brand_voice():
 
 
 # static web app
-if Path('web').exists():
-    app.mount('/web', StaticFiles(directory='web'), name='web')
+BASE_DIR = Path(__file__).resolve().parent
+WEB_DIR = BASE_DIR / 'web'
+PAGES_DIR = BASE_DIR / 'workspace' / 'pages'
+if WEB_DIR.exists():
+    app.mount('/web', StaticFiles(directory=str(WEB_DIR)), name='web')
+if PAGES_DIR.exists():
+    app.mount('/pages', StaticFiles(directory=str(PAGES_DIR)), name='pages')
 
 
 # =====================================================================
@@ -1466,3 +1471,5 @@ async def a2a_list_tasks():
     """List recent A2A tasks."""
     handler = get_a2a_handler()
     return {"tasks": handler.list_tasks()}
+
+

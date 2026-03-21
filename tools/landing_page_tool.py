@@ -2,6 +2,7 @@
 import logging
 import uuid
 from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger("svos.tools.landing_page")
 
@@ -92,3 +93,44 @@ class LandingPageTool:
             "filename": filename,
             "title": title,
         }
+
+
+    async def execute(
+        self,
+        company_name: str,
+        headline: str,
+        subheadline: str = "",
+        benefits: list[str] | None = None,
+        cta_text: str = "Get Started",
+        lang: str = "ar",
+    ) -> dict:
+        return self.generate(
+            title=company_name,
+            headline=headline,
+            sub_headline=subheadline,
+            features=benefits or [],
+            cta_text=cta_text,
+            lang=lang,
+        )
+
+    def list_pages(self) -> list[dict]:
+        items = []
+        for f in Path(PAGES_DIR).glob('page_*.html'):
+            items.append({"filename": f.name, "path": str(f), "size": f.stat().st_size})
+        return sorted(items, key=lambda x: x["filename"], reverse=True)
+
+    def get_page_path(self, page_id: str):
+        p = Path(PAGES_DIR)
+        direct = p / page_id
+        if direct.exists():
+            return direct
+        if page_id.endswith('.html'):
+            candidate = p / page_id
+            return candidate if candidate.exists() else None
+        candidate = p / f"page_{page_id}.html"
+        if candidate.exists():
+            return candidate
+        return None
+
+
+

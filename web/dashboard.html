@@ -91,17 +91,30 @@ async function api(path, method='GET', body=null) {
 async function loadOverview() {
   try {
     const d = await api('/dashboard/overview');
-    if (!d.success) throw new Error('API failed');
-    document.getElementById('stat-agents').textContent = d.system.total_agents;
-    document.getElementById('stat-tools').textContent = d.system.total_tools;
-    document.getElementById('stat-routes').textContent = d.system.total_routes;
-    document.getElementById('stat-version').textContent = d.system.version;
+    const totalAgents = d?.system?.total_agents ?? d?.agents_total ?? 0;
+    const totalTools = d?.system?.total_tools ?? 4;
+    const totalRoutes = d?.system?.total_routes ?? 0;
+    const version = d?.system?.version ?? d?.version ?? 'v1';
+
+    document.getElementById('stat-agents').textContent = totalAgents;
+    document.getElementById('stat-tools').textContent = totalTools;
+    document.getElementById('stat-routes').textContent = totalRoutes;
+    document.getElementById('stat-version').textContent = version;
     document.getElementById('sys-status').textContent = 'System Online';
+
     const grid = document.getElementById('agent-grid');
     grid.innerHTML = '';
-    d.agents.forEach(a => {
-      const tools = a.tools.map(t => '<span class="tool-tag">'+t+'</span>').join('');
-      grid.innerHTML += '<div class="agent-card" onclick="selectAgent(\''+a.role+'\')">' + '<div class="agent-role">'+a.role+'</div>' + '<span class="agent-status status-active">Active</span>' + '<div class="agent-tools">'+tools+'</div></div>';
+
+    let agents = d?.agents;
+    if (!Array.isArray(agents)) {
+      const ag = await api('/dashboard/agents');
+      agents = ag?.agents || [];
+    }
+
+    agents.forEach(a => {
+      const role = a.role || a.id || 'AGENT';
+      const tools = (a.tools || a.tools_available || []).map(t => '<span class="tool-tag">'+t+'</span>').join('');
+      grid.innerHTML += '<div class="agent-card" onclick="selectAgent(\''+role+'\')">' + '<div class="agent-role">'+role+'</div>' + '<span class="agent-status status-active">Active</span>' + '<div class="agent-tools">'+tools+'</div></div>';
     });
   } catch(e) {
     document.getElementById('sys-status').textContent = 'Connection Error';
@@ -167,3 +180,4 @@ setInterval(loadOverview, 30000);
 </script>
 </body>
 </html>
+
