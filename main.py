@@ -1142,3 +1142,103 @@ async def social_post(body: dict):
         content=body.get("content", ""),
         platform=body.get("platform", "twitter")
     )
+
+# ============================================================
+# DASHBOARD ENDPOINTS (Priority 2 - Executive Dashboard)
+# ============================================================
+@app.get('/dashboard/overview')
+async def dashboard_overview_v2():
+    """Full system health snapshot for founder dashboard."""
+    from agents import AGENT_REGISTRY
+    from tool_registry import build_registry
+    import time
+
+    registry = build_registry()
+    agent_summaries = []
+    for role, agent_cls in AGENT_REGISTRY.items():
+        agent_summaries.append(
+            {
+                "role": role,
+                "status": "active",
+                "tools": list(registry.get_tools_for_role(role).keys()),
+            }
+        )
+
+    return {
+        "success": True,
+        "timestamp": time.time(),
+        "system": {
+            "version": settings.app_version if hasattr(settings, 'app_version') else "0.1.0",
+            "total_agents": len(agent_summaries),
+            "total_tools": len(registry.list_all()),
+            "total_routes": len([r for r in app.routes if hasattr(r, 'path')]),
+        },
+        "agents": agent_summaries,
+        "tools": registry.list_all(),
+    }
+
+
+@app.get('/dashboard/agents')
+async def dashboard_agents_list_v2():
+    """List all agents with their capabilities and tool access."""
+    from agents import AGENT_REGISTRY
+    from tool_registry import build_registry
+
+    registry = build_registry()
+    agents = []
+
+    for role, agent_cls in AGENT_REGISTRY.items():
+        tools = registry.get_tools_for_role(role)
+        agents.append(
+            {
+                "role": role,
+                "class": agent_cls.__name__,
+                "tools_available": list(tools.keys()),
+                "tool_count": len(tools),
+                "capabilities": {
+                    "think": True,
+                    "discuss": True,
+                    "shadow_run": True,
+                    "learn": True,
+                    "spawn_sub": True,
+                },
+            }
+        )
+
+    return {"success": True, "agents": agents}
+
+
+@app.get('/dashboard/agent/{role}')
+async def dashboard_agent_detail(role: str):
+    """Get detailed info about a specific agent."""
+    from agents import AGENT_REGISTRY
+    from tool_registry import build_registry
+
+    role_upper = role.upper()
+    if role_upper not in AGENT_REGISTRY:
+        raise HTTPException(404, f"Agent '{role_upper}' not found")
+
+    registry = build_registry()
+    tools = registry.get_tools_for_role(role_upper)
+
+    return {
+        "success": True,
+        "agent": {
+            "role": role_upper,
+            "class": AGENT_REGISTRY[role_upper].__name__,
+            "tools": tools,
+            "endpoints": {
+                "think": f"/agents/{role_upper}/think",
+                "discuss": "/dashboard/discuss",
+                "chat": "/dashboard/chat",
+            },
+        },
+    }
+
+@app.get('/dashboard')
+async def dashboard_page():
+    """Serve the founder dashboard UI."""
+    dash_path = Path('web/dashboard.html')
+    if dash_path.exists():
+        return FileResponse(str(dash_path))
+    return {'error': 'Dashboard not found. Expected at web/dashboard.html'}
