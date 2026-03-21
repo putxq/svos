@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -553,60 +553,6 @@ async def wizard_chat(req: WizardChatRequest):
 # =====================================================================
 # SCHEDULER ENDPOINTS — الحلقة المستقلة
 # =====================================================================
-from engine.scheduler import SVOSScheduler
-
-_scheduler = SVOSScheduler()
-
-
-@app.post('/scheduler/start')
-async def scheduler_start(body: dict):
-    """يبدأ الحلقة المستقلة."""
-    company = {
-        "description": body.get("description", "Digital business"),
-        "goal": body.get("goal", "Growth"),
-        "budget": body.get("budget", "$5,000"),
-    }
-    email = body.get("founder_email", "")
-    hours = float(body.get("interval_hours", 6))
-
-    result = _scheduler.start(company, email, hours)
-    return result
-
-
-@app.post('/scheduler/stop')
-async def scheduler_stop():
-    """يوقف الحلقة المستقلة."""
-    return _scheduler.stop()
-
-
-@app.get('/scheduler/status')
-async def scheduler_status():
-    """حالة المجدوِل."""
-    return _scheduler.get_status()
-
-
-@app.post('/scheduler/run-once')
-async def scheduler_run_once(body: dict):
-    """يشغّل دورة واحدة فقط (للاختبار)."""
-    company = {
-        "description": body.get("description", "Digital business"),
-        "goal": body.get("goal", "Growth"),
-        "budget": body.get("budget", "$5,000"),
-    }
-
-    _scheduler.configure(company)
-    report = await _scheduler._run_cycle_safe()
-
-    # Send email if provided
-    email = body.get("founder_email", "")
-    if email:
-        _scheduler.founder_email = email
-        await _scheduler._send_report_email(report)
-
-    return {"success": True, "report": report}
-
-
-# =====================================================================
 # REAL EXECUTION ENDPOINTS — التنفيذ الحقيقي
 # =====================================================================
 from tools.landing_page_tool import LandingPageTool
@@ -1143,70 +1089,6 @@ async def social_post(body: dict):
         platform=body.get("platform", "twitter")
     )
 
-# ============================================================
-# DASHBOARD ENDPOINTS (Priority 2 - Executive Dashboard)
-# ============================================================
-@app.get('/dashboard/overview')
-async def dashboard_overview_v2():
-    """Full system health snapshot for founder dashboard."""
-    from agents import AGENT_REGISTRY
-    from tool_registry import build_registry
-    import time
-
-    registry = build_registry()
-    agent_summaries = []
-    for role, agent_cls in AGENT_REGISTRY.items():
-        agent_summaries.append(
-            {
-                "role": role,
-                "status": "active",
-                "tools": list(registry.get_tools_for_role(role).keys()),
-            }
-        )
-
-    return {
-        "success": True,
-        "timestamp": time.time(),
-        "system": {
-            "version": settings.app_version if hasattr(settings, 'app_version') else "0.1.0",
-            "total_agents": len(agent_summaries),
-            "total_tools": len(registry.list_all()),
-            "total_routes": len([r for r in app.routes if hasattr(r, 'path')]),
-        },
-        "agents": agent_summaries,
-        "tools": registry.list_all(),
-    }
-
-
-@app.get('/dashboard/agents')
-async def dashboard_agents_list_v2():
-    """List all agents with their capabilities and tool access."""
-    from agents import AGENT_REGISTRY
-    from tool_registry import build_registry
-
-    registry = build_registry()
-    agents = []
-
-    for role, agent_cls in AGENT_REGISTRY.items():
-        tools = registry.get_tools_for_role(role)
-        agents.append(
-            {
-                "role": role,
-                "class": agent_cls.__name__,
-                "tools_available": list(tools.keys()),
-                "tool_count": len(tools),
-                "capabilities": {
-                    "think": True,
-                    "discuss": True,
-                    "shadow_run": True,
-                    "learn": True,
-                    "spawn_sub": True,
-                },
-            }
-        )
-
-    return {"success": True, "agents": agents}
-
 
 @app.get('/dashboard/agent/{role}')
 async def dashboard_agent_detail(role: str):
@@ -1242,3 +1124,59 @@ async def dashboard_page():
     if dash_path.exists():
         return FileResponse(str(dash_path))
     return {'error': 'Dashboard not found. Expected at web/dashboard.html'}
+
+# ============================================================
+# AUTONOMOUS LOOP ENDPOINTS (Priority 3 - Scheduler + Self-Healing)
+# ============================================================
+from scheduler import get_scheduler
+
+
+@app.get('/scheduler/status')
+async def scheduler_status_v2():
+    s = get_scheduler()
+    return {"success": True, "scheduler": s.get_status()}
+
+
+@app.post('/scheduler/start')
+async def scheduler_start_v2(body: dict = {}):
+    s = get_scheduler()
+    hours = body.get("cycle_hours", None)
+    if hours:
+        s.cycle_hours = float(hours)
+    await s.start()
+    return {"success": True, "message": f"Scheduler started (cycle every {s.cycle_hours}h)"}
+
+
+@app.post('/scheduler/stop')
+async def scheduler_stop_v2():
+    s = get_scheduler()
+    await s.stop()
+    return {"success": True, "message": "Scheduler stopped"}
+
+
+@app.post('/scheduler/run-now')
+async def scheduler_run_now():
+    s = get_scheduler()
+    try:
+        result = await s._run_cycle()
+        return {"success": True, "cycle": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get('/scheduler/heartbeat')
+async def scheduler_heartbeat():
+    s = get_scheduler()
+    health = await s.heartbeat()
+    return {"success": True, "health": health}
+
+
+@app.get('/scheduler/history')
+async def scheduler_history_v2():
+    s = get_scheduler()
+    return {
+        "success": True,
+        "total_cycles": len(s.cycle_history),
+        "recent": s.cycle_history[-5:] if s.cycle_history else [],
+        "errors": s.errors[-10:] if s.errors else [],
+    }
