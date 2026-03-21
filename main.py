@@ -2054,5 +2054,121 @@ async def blueprint_industries():
     return {"success": True, "industries": industries}
 
 
+# ============================================================
+# INBOX ENDPOINT (Phase 3 — Inbound Handling)
+# ============================================================
+from engines.reaction_hooks import trigger_hook
+
+
+@app.post('/my/inbox')
+async def my_inbox(body: dict, request: Request):
+    """
+    Universal inbound endpoint. Any external source (Zapier, n8n, webhook,
+    email forwarding) sends messages here. SVOS classifies and routes.
+    Body: {"type": "email"|"form"|"message", "from": "...", "subject": "...", "body": "...", "metadata": {}}
+    """
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    msg_body = body.get("body", "")
+    if not msg_body:
+        raise HTTPException(400, "body is required")
+
+    result = await trigger_hook("inbound_received", {
+        "customer_id": cid,
+        "type": body.get("type", "message"),
+        "from": body.get("from", ""),
+        "subject": body.get("subject", ""),
+        "body": msg_body,
+        "metadata": body.get("metadata", {}),
+    })
+
+    return {"success": True, "result": result}
+
+
+# ============================================================
+# FEEDBACK & LEARNING ENDPOINTS (Phase 4)
+# ============================================================
+from engines.feedback_loop import run_weekly_feedback, generate_weekly_report
+
+
+@app.post('/my/company/weekly-review')
+async def my_weekly_review(request: Request):
+    """Run the weekly decision feedback loop. Evaluates past decisions and generates lessons."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    llm = None
+    try:
+        from core.llm_provider import LLMProvider
+        llm = LLMProvider()
+    except Exception:
+        pass
+
+    result = await run_weekly_feedback(cid, llm)
+    return {"success": True, "review": result}
+
+
+@app.get('/my/company/weekly-report')
+async def my_weekly_report(request: Request):
+    """Generate a weekly performance report."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    llm = None
+    try:
+        from core.llm_provider import LLMProvider
+        llm = LLMProvider()
+    except Exception:
+        pass
+
+    report = await generate_weekly_report(cid, llm)
+    return {"success": True, "report": report}
+
+
+# ============================================================
+# QUALITY GATE ENDPOINT
+# ============================================================
+from engines.quality_gate import check_quality, ai_quality_review
+
+
+@app.post('/my/quality/check')
+async def my_quality_check(body: dict, request: Request):
+    """Check content quality before sending/publishing."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    content = body.get("content", "")
+    if not content:
+        raise HTTPException(400, "content is required")
+
+    content_type = body.get("content_type", "general")
+    use_ai = body.get("use_ai", False)
+
+    if use_ai:
+        try:
+            from core.llm_provider import LLMProvider
+            llm = LLMProvider()
+            state = get_company_state(cid)
+            context = state.get_agent_context()
+            result = await ai_quality_review(content, content_type, context, llm)
+        except Exception as e:
+            result = check_quality(content, content_type)
+            result["ai_note"] = f"AI review unavailable: {str(e)}"
+    else:
+        result = check_quality(content, content_type)
+
+    return {"success": True, "quality": result}
+
+
+
 
 

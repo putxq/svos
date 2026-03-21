@@ -277,66 +277,85 @@ class SVOSScheduler:
             decision = previous_phases.get("decision", {})
             decision_text = str(decision.get("decision", ""))
             actions_taken = []
+            company_state = getattr(self, "_company_state", None)
 
-            # ── Auto-execute safe actions based on decision keywords ──
-            # Content generation (safe, no external side effects)
-            if any(kw in decision_text.lower() for kw in ["content", "marketing", "blog", "social", "محتوى", "تسويق"]):
+            # ── Step 1: Generate Action Plan (AI or rule-based) ──
+            try:
+                from engines.action_planner import generate_action_plan
+                from engines.blueprint_engine import load_blueprint
+
+                bp = None
                 try:
-                    from engines.digital_factory import DigitalFactory
-                    factory = DigitalFactory()
-                    result = await factory.produce_content(
-                        topic="AI-powered business automation in Saudi Arabia",
-                        business="SVOS Digital Company",
-                        platforms=["linkedin", "twitter"],
-                        tone="professional",
-                        language="ar",
+                    from core.tenant import get_customer_id
+                    cid = get_customer_id()
+                    if cid:
+                        bp = load_blueprint(cid)
+                except Exception:
+                    pass
+
+                action_plan = await generate_action_plan(
+                    decision_text=decision_text,
+                    company_state=company_state.state if company_state else None,
+                    blueprint=bp,
+                )
+            except Exception as e:
+                logger.warning(f"Action planning failed: {e}")
+                action_plan = [{"tool": "report", "description": "Fallback report", "params": {}, "priority": 4, "requires_approval": False}]
+
+            # Sort by priority
+            action_plan.sort(key=lambda a: a.get("priority", 99))
+            logger.info(f"Action plan: {len(action_plan)} actions")
+
+            # ── Step 2: Execute each action (with checks) ──
+            for action in action_plan:
+                tool = action.get("tool", "")
+                params = action.get("params", {})
+                requires_approval = action.get("requires_approval", False)
+
+                # Check execution limits
+                if company_state:
+                    limit_check = company_state.check_execution_limit(tool)
+                    if not limit_check.get("allowed", True):
+                        actions_taken.append({
+                            "action": action.get("description", tool),
+                            "tool": tool,
+                            "status": "blocked",
+                            "reason": limit_check.get("reason", "limit_reached"),
+                        })
+                        continue
+
+                # Check quality gate for external actions
+                from engines.quality_gate import gate_action
+                gate = gate_action(tool, params=params)
+                if not gate.get("allowed", True):
+                    actions_taken.append({
+                        "action": action.get("description", tool),
+                        "tool": tool,
+                        "status": "blocked",
+                        "reason": gate.get("reason", "quality_check_failed"),
+                    })
+                    continue
+
+                # Route: approval or auto-execute
+                if requires_approval and company_state:
+                    approval_id = company_state.add_pending_approval(
+                        action=action.get("description", tool),
+                        tool=tool,
+                        params=params,
                     )
                     actions_taken.append({
-                        "action": "content_produced",
-                        "status": "done",
-                        "platforms": ["linkedin", "twitter"],
-                        "summary": str(result)[:300],
+                        "action": action.get("description", tool),
+                        "tool": tool,
+                        "status": "pending_approval",
+                        "approval_id": approval_id,
                     })
-                except Exception as e:
-                    actions_taken.append({"action": "content_production", "status": "error", "error": str(e)})
+                    continue
 
-            # Market scan (safe, read-only)
-            if any(kw in decision_text.lower() for kw in ["market", "opportunity", "scan", "سوق", "فرص"]):
-                try:
-                    from engines.gravity_engine import GravityEngine
-                    engine = GravityEngine()
-                    result = await engine.find_demand_gravity(
-                        "SME digital transformation Saudi Arabia 2026"
-                    )
-                    actions_taken.append({
-                        "action": "market_scan_deep",
-                        "status": "done",
-                        "summary": str(result)[:300],
-                    })
-                except Exception as e:
-                    actions_taken.append({"action": "market_scan_deep", "status": "error", "error": str(e)})
+                # Auto-execute safe actions
+                exec_result = await self._execute_tool(tool, params, company_state)
+                actions_taken.append(exec_result)
 
-            # Landing page generation (safe, generates file only)
-            if any(kw in decision_text.lower() for kw in ["landing", "page", "website", "صفحة", "موقع"]):
-                try:
-                    from tools.landing_page_tool import LandingPageTool
-                    lp_tool = LandingPageTool()
-                    result = await lp_tool.execute(
-                        company_name="SVOS Auto-Generated",
-                        headline="Transform Your Business with AI",
-                        subheadline="Autonomous digital operations for Saudi SMEs",
-                        benefits=["Lower cost than hiring", "24/7 operations", "AI-powered decisions"],
-                        cta_text="Start Free",
-                    )
-                    actions_taken.append({
-                        "action": "landing_page_generated",
-                        "status": "done",
-                        "summary": str(result)[:300],
-                    })
-                except Exception as e:
-                    actions_taken.append({"action": "landing_page", "status": "error", "error": str(e)})
-
-            # Daily report generation (always)
+            # ── Step 3: Daily report (always) ──
             try:
                 briefing = previous_phases.get("briefing", {}).get("summary", "No briefing")
                 market = previous_phases.get("market_scan", {}).get("opportunities", "No scan")
@@ -345,28 +364,103 @@ class SVOSScheduler:
                     f"Briefing: {briefing[:200]}\n"
                     f"Market: {market[:200]}\n"
                     f"Decision: {decision_text[:200]}\n"
-                    f"Actions: {len(actions_taken)} executed\n"
+                    f"Actions planned: {len(action_plan)}\n"
+                    f"Actions executed: {sum(1 for a in actions_taken if a.get('status') == 'done')}\n"
+                    f"Actions pending approval: {sum(1 for a in actions_taken if a.get('status') == 'pending_approval')}\n"
                 )
                 report_dir = Path("workspace/daily_reports")
                 report_dir.mkdir(parents=True, exist_ok=True)
                 report_file = report_dir / f"cycle_{self.current_cycle}.txt"
                 report_file.write_text(report_content, encoding="utf-8")
-                actions_taken.append({
-                    "action": "daily_report_saved",
-                    "status": "done",
-                    "file": str(report_file),
-                })
+                actions_taken.append({"action": "daily_report_saved", "tool": "report", "status": "done", "file": str(report_file)})
             except Exception as e:
-                actions_taken.append({"action": "daily_report", "status": "error", "error": str(e)})
+                actions_taken.append({"action": "daily_report", "tool": "report", "status": "error", "error": str(e)})
+
+            # ── Step 4: Fire reaction hook ──
+            try:
+                from engines.reaction_hooks import trigger_hook
+                from core.tenant import get_customer_id
+                cid = get_customer_id()
+                if cid:
+                    await trigger_hook("cycle_completed", {
+                        "customer_id": cid,
+                        "cycle": self.current_cycle,
+                        "actions_taken": len(actions_taken),
+                    })
+            except Exception:
+                pass
 
             return {
                 "status": "done",
                 "actions_taken": actions_taken,
                 "total_actions": len(actions_taken),
+                "planned": len(action_plan),
+                "executed": sum(1 for a in actions_taken if a.get("status") == "done"),
+                "pending_approval": sum(1 for a in actions_taken if a.get("status") == "pending_approval"),
+                "blocked": sum(1 for a in actions_taken if a.get("status") == "blocked"),
             }
         except Exception as e:
             logger.error(f"Execution phase error: {e}")
             return {"status": "error", "error": str(e)}
+
+    async def _execute_tool(self, tool: str, params: dict, company_state=None) -> dict:
+        """Execute a single tool action."""
+        try:
+            if tool == "content":
+                from engines.digital_factory import DigitalFactory
+                factory = DigitalFactory()
+                result = await factory.produce_content(
+                    topic=params.get("topic", "business insights"),
+                    business=params.get("business", "SVOS Company"),
+                    platforms=params.get("platforms", ["linkedin"]),
+                    tone=params.get("tone", "professional"),
+                    language=params.get("language", "ar"),
+                )
+                if company_state:
+                    company_state.increment_kpi("content_produced")
+                    company_state.record_execution("content")
+                return {"action": "content_produced", "tool": tool, "status": "done", "summary": str(result)[:300]}
+
+            elif tool == "market_scan":
+                from engines.gravity_engine import GravityEngine
+                engine = GravityEngine()
+                query = params.get("query", "market opportunities 2026")
+                result = await engine.find_demand_gravity(query)
+                return {"action": "market_scan", "tool": tool, "status": "done", "summary": str(result)[:300]}
+
+            elif tool == "landing_page":
+                from tools.landing_page_tool import LandingPageTool
+                lp = LandingPageTool()
+                result = await lp.execute(
+                    company_name=params.get("company_name", "SVOS"),
+                    headline=params.get("headline", "Welcome"),
+                    subheadline=params.get("subheadline", ""),
+                    benefits=params.get("benefits", []),
+                    cta_text=params.get("cta_text", "Start"),
+                )
+                if company_state:
+                    company_state.increment_kpi("landing_pages_created")
+                    company_state.record_execution("landing_page")
+                return {"action": "landing_page", "tool": tool, "status": "done", "summary": str(result)[:300]}
+
+            elif tool == "analysis":
+                from engines.digital_factory import DigitalFactory
+                factory = DigitalFactory()
+                result = await factory.produce_analysis(
+                    business=params.get("business", ""),
+                    data_description=params.get("data_description", "general business data"),
+                    analysis_goal=params.get("goal", "identify opportunities"),
+                )
+                return {"action": "analysis", "tool": tool, "status": "done", "summary": str(result)[:300]}
+
+            elif tool == "report":
+                return {"action": "report_generated", "tool": tool, "status": "done"}
+
+            else:
+                return {"action": tool, "tool": tool, "status": "skipped", "reason": f"tool '{tool}' not wired in scheduler"}
+
+        except Exception as e:
+            return {"action": tool, "tool": tool, "status": "error", "error": str(e)}
 
     async def _phase_report(self, cycle_result: dict) -> dict:
         logger.info("[Phase 5] Daily Report")
