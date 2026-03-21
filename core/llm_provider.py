@@ -371,7 +371,6 @@ class LLMProvider:
             try:
                 from core.tenant_llm_config import load_llm_config
                 from core.tenant import get_customer_id
-
                 tenant_config = load_llm_config()
 
                 # If there's an authenticated tenant but NO LLM config → block.
