@@ -1,6 +1,8 @@
 ﻿import json
 from core.llm_provider import LLMProvider
 from core.json_parser import parse_llm_json, extract_field
+from engines.confidence_engine import ConfidenceEngine
+from core.response_schemas import validate_response, ScenarioSchema, TimeResult
 
 
 class TimeEngine:
@@ -93,7 +95,7 @@ class TimeEngine:
         count = 0
         for key, scenario in sim.get("scenarios", {}).items():
             if isinstance(scenario, dict):
-                total_confidence += scenario.get("confidence", 0.5)
+                total_confidence += ConfidenceEngine.normalize(scenario.get("confidence", 0.5))
                 count += 1
 
         avg_confidence = total_confidence / count if count > 0 else 0.5
@@ -114,3 +116,4 @@ class TimeEngine:
             "kill_signals_count": len(kill_signals),
             "simulation": sim,
         }
+

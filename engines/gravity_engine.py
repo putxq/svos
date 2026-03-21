@@ -4,6 +4,8 @@ import re
 from typing import Any
 
 from core.json_parser import parse_llm_json, extract_field
+from engines.confidence_engine import ConfidenceEngine
+from core.response_schemas import validate_response, OpportunitySchema, GravityResult
 
 
 class GravityEngine:
@@ -31,6 +33,7 @@ class GravityEngine:
 
     @staticmethod
     def _extract_confidence(obj: dict, scale_hint: str = "auto") -> float:
+        # Use centralized ConfidenceEngine for normalization
         """
         يستخرج قيمة الثقة من أي مفتاح ممكن Claude يستخدمه.
         يدعم: confidence, confidence_score, score, confidence_level
@@ -340,6 +343,10 @@ class GravityEngine:
             merged["confidence_eval"] = round(eval_conf, 3)
             merged["confidence"] = round(final_conf, 3)
             deep_evals.append(merged)
+
+        # Normalize all confidence values through ConfidenceEngine
+        for opp in deep_evals:
+            opp["confidence"] = ConfidenceEngine.normalize(opp.get("confidence", 0.5))
 
         deep_evals.sort(key=lambda x: float(x.get("confidence", 0.0)), reverse=True)
 
