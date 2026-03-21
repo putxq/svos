@@ -79,8 +79,22 @@ class BaseAgent:
 
     # === التفكير ===
     async def think(self, task: str, context: dict) -> ThinkResult:
+        # ── Load Company State context if available ──
+        company_context = ""
+        try:
+            from engines.company_state import get_company_state
+            state = get_company_state()
+            company_context = state.get_agent_context()
+        except Exception:
+            pass  # No state available — proceed without
+
         system_prompt = (
-            "You are an executive AI agent. You must return a JSON with:\n"
+            f"You are {self.name}, {self.role} in the {self.department} department.\n"
+        )
+        if company_context:
+            system_prompt += f"\n=== COMPANY CONTEXT ===\n{company_context}\n\n"
+        system_prompt += (
+            "You must return a JSON with:\n"
             "- plan: a list of 3-5 concrete action steps (never empty)\n"
             "- confidence: a float between 0.0 and 1.0\n"
             "- reasoning: why you chose this plan\n"

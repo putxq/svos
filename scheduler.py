@@ -103,6 +103,21 @@ class SVOSScheduler:
         self.last_cycle_time = cycle_start
         logger.info(f"=== CYCLE {self.current_cycle} START ===")
 
+        # ── Load Company State (the company's living memory) ──
+        try:
+            from engines.company_state import get_company_state
+            company_state = get_company_state()
+            state_context = company_state.get_agent_context()
+            logger.info(f"Company State loaded ({len(state_context)} chars context)")
+        except Exception as e:
+            logger.warning(f"Company State load failed (continuing without): {e}")
+            company_state = None
+            state_context = ""
+
+        # Store context for phases to use
+        self._current_state_context = state_context
+        self._company_state = company_state
+
         cycle_result = {
             "cycle": self.current_cycle,
             "started": cycle_start.isoformat(),
@@ -129,6 +144,32 @@ class SVOSScheduler:
         cycle_result["duration_seconds"] = (datetime.utcnow() - cycle_start).total_seconds()
         cycle_result["success"] = True
 
+        # ── Generate Cycle Summary (dual layer) ──
+        try:
+            from engines.cycle_summary import generate_full_summary
+            summary = await generate_full_summary(
+                cycle_result,
+                company_state.state if company_state else None,
+            )
+            cycle_result["summary"] = summary
+
+            # ── Update Company State with cycle results ──
+            if company_state:
+                narrative = summary.get("narrative", "")
+                op = summary.get("operational", {})
+                company_state.add_cycle_snapshot(
+                    cycle=self.current_cycle,
+                    summary=narrative[:300] if narrative else str(op.get("highlights", ""))[:300],
+                    actions_taken=op.get("actions", {}).get("total", 0),
+                    decisions_made=1 if cycle_result["phases"].get("decision", {}).get("status") == "done" else 0,
+                )
+                company_state.update_status(
+                    health=op.get("health", "unknown"),
+                )
+                logger.info(f"Company State updated after cycle {self.current_cycle}")
+        except Exception as e:
+            logger.warning(f"Cycle summary generation failed: {e}")
+
         self.cycle_history.append(cycle_result)
         logger.info(f"=== CYCLE {self.current_cycle} COMPLETE ({cycle_result['duration_seconds']:.1f}s) ===")
         return cycle_result
@@ -143,12 +184,24 @@ class SVOSScheduler:
             if not ceo_cls:
                 return {"status": "skip", "reason": "CEO agent not found"}
 
+            # Inject Company State context into briefing
+            state_context = getattr(self, "_current_state_context", "")
+            base_context = (
+                "You are the CEO of a sovereign AI company running on SVOS. "
+                "The system has 9 C-suite agents, 4 execution tools, and runs autonomous cycles."
+            )
+            if state_context:
+                full_context = f"{base_context}\n\n=== COMPANY STATE ===\n{state_context}"
+            else:
+                full_context = base_context
+
             ceo = ceo_cls()
             result = await ceo.think(
-                task="Generate a morning briefing for the SVOS system. "
-                "Summarize system status, pending priorities, and recommended focus areas for today.",
-                context="You are the CEO of a sovereign AI company called SVOS. "
-                "The system has 9 C-suite agents, 4 execution tools, and runs autonomous cycles.",
+                task="Generate a morning briefing. "
+                "Review the company state, summarize what happened recently, "
+                "identify pending priorities, and recommend focus areas for today. "
+                "Be specific based on the company context provided.",
+                context=full_context,
             )
             return {"status": "done", "summary": str(result)[:500], "version": settings.app_version}
         except Exception as e:

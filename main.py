@@ -1811,3 +1811,133 @@ async def onboard_page():
     return {'error': 'Onboarding page not found at web/onboard.html'}
 
 
+# ============================================================
+# COMPANY STATE ENDPOINTS (Phase 1 — The Company Remembers)
+# ============================================================
+from engines.company_state import get_company_state
+
+
+@app.get('/my/company/state')
+async def my_company_state(request: Request):
+    """Get full company state (raw JSON for developers/integrations)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+    state = get_company_state(cid)
+    return {"success": True, "state": state.state}
+
+
+@app.get('/my/company/summary')
+async def my_company_summary(request: Request):
+    """Get executive summary + KPIs (for dashboard display)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    state = get_company_state(cid)
+    s = state.state
+    recent = s.get("recent_cycles", [])
+    pending = state.get_pending_approvals()
+
+    return {
+        "success": True,
+        "company_name": s.get("identity", {}).get("company_name", ""),
+        "phase": s.get("current_status", {}).get("phase", "startup"),
+        "health": s.get("current_status", {}).get("health", "unknown"),
+        "cycles_completed": s.get("current_status", {}).get("cycles_completed", 0),
+        "kpis": s.get("kpis", {}),
+        "top_priorities": s.get("current_status", {}).get("top_priorities", []),
+        "last_narrative": recent[-1].get("summary", "") if recent else "",
+        "pending_approvals": len(pending),
+        "pending_actions": pending,
+    }
+
+
+@app.post('/my/company/priorities')
+async def my_company_priorities(body: dict, request: Request):
+    """Update company priorities."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    priorities = body.get("priorities", [])
+    if not priorities:
+        raise HTTPException(400, "priorities list required")
+
+    state = get_company_state(cid)
+    state.update_status(top_priorities=priorities[:3])
+    return {"success": True, "priorities": priorities[:3]}
+
+
+@app.post('/my/company/approve')
+async def my_company_approve(body: dict, request: Request):
+    """Approve or reject a pending action."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    approval_id = body.get("approval_id", "")
+    approved = body.get("approved", False)
+
+    if not approval_id:
+        raise HTTPException(400, "approval_id required")
+
+    state = get_company_state(cid)
+    result = state.resolve_approval(approval_id, approved)
+    if not result.get("resolved"):
+        raise HTTPException(404, result.get("reason", "not found"))
+
+    # If approved, execute the action
+    if approved and result.get("action"):
+        action = result["action"]
+        try:
+            tool_name = action.get("tool", "")
+            params = action.get("params", {})
+            executed = tool_registry.execute(tool_name, "CEO", "execute", **params)
+            result["execution"] = executed
+            state.record_execution(tool_name)
+        except Exception as e:
+            result["execution_error"] = str(e)
+
+    return {"success": True, "result": result}
+
+
+@app.get('/my/company/approvals')
+async def my_company_approvals(request: Request):
+    """List all pending approvals."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    state = get_company_state(cid)
+    return {"success": True, "pending": state.get_pending_approvals()}
+
+
+@app.post('/my/company/controls')
+async def my_company_controls(body: dict, request: Request):
+    """Update execution controls (limits, auto-execute, require-approval lists)."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    state = get_company_state(cid)
+    controls = state.state.get("controls", {})
+
+    if "execution_limits" in body:
+        controls["execution_limits"].update(body["execution_limits"])
+    if "auto_execute" in body:
+        controls["auto_execute"] = body["auto_execute"]
+    if "require_approval" in body:
+        controls["require_approval"] = body["require_approval"]
+
+    state.save()
+    return {"success": True, "controls": controls}
+
+
+
