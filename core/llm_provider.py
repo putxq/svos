@@ -370,7 +370,19 @@ class LLMProvider:
         if tenant_config is None and provider is None:
             try:
                 from core.tenant_llm_config import load_llm_config
+                from core.tenant import get_customer_id
+
                 tenant_config = load_llm_config()
+
+                # If there's an authenticated tenant but NO LLM config → block.
+                # Global key is for system/scheduler only, not free rides.
+                if tenant_config is None and get_customer_id():
+                    raise ValueError(
+                        "Please configure your AI provider. "
+                        "Use POST /my/llm/configure to add your API key."
+                    )
+            except ValueError:
+                raise  # re-raise our own error
             except Exception:
                 tenant_config = None
 
@@ -380,7 +392,7 @@ class LLMProvider:
             self._tenant_config = tenant_config
             self._source = "tenant"
         else:
-            # Global / env fallback
+            # Global / env — only for system-level calls (scheduler, internal)
             raw_name = (provider or self._env("LLM_PROVIDER") or "anthropic").lower().strip()
             self._tenant_config = None
             self._source = "global"
