@@ -1,6 +1,7 @@
 ﻿import os
 import logging
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -20,6 +21,7 @@ class EmailTool:
         self.smtp_user = os.getenv("SMTP_USER", "")
         self.smtp_pass = os.getenv("SMTP_PASS", "")
         self.from_email = os.getenv("SMTP_FROM", self.smtp_user)
+        self.smtp_timeout = int(os.getenv("SMTP_TIMEOUT", "15"))
         self.configured = bool(self.smtp_user and self.smtp_pass)
 
         if self.configured:
@@ -27,19 +29,33 @@ class EmailTool:
         else:
             logger.warning("EmailTool: Missing SMTP credentials - dry-run mode")
 
+    def _build_message(self, to: str, subject: str, body: str, html: str = None) -> MIMEMultipart:
+        msg = MIMEMultipart("alternative")
+        msg["From"] = self.from_email
+        msg["To"] = to
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
+        if html:
+            msg.attach(MIMEText(html, "html"))
+        return msg
+
+    def _send_via_smtp(self, port: int, msg: MIMEMultipart) -> None:
+        use_ssl = port == 465
+        if use_ssl:
+            with smtplib.SMTP_SSL(self.smtp_host, port, timeout=self.smtp_timeout) as server:
+                server.login(self.smtp_user, self.smtp_pass)
+                server.send_message(msg)
+            return
+
+        with smtplib.SMTP(self.smtp_host, port, timeout=self.smtp_timeout) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(self.smtp_user, self.smtp_pass)
+            server.send_message(msg)
+
     def send(self, to: str, subject: str, body: str, html: str = None) -> dict:
-        """
-        Send an email.
-
-        Args:
-            to: Recipient email
-            subject: Email subject
-            body: Plain text body
-            html: Optional HTML body
-
-        Returns:
-            dict with status
-        """
+        """Send an email."""
         if not self.configured:
             logger.info(f"[DRY-RUN] Email to {to}: {subject}")
             return {
@@ -49,32 +65,27 @@ class EmailTool:
                 "message": "Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM.",
             }
 
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["From"] = self.from_email
-            msg["To"] = to
-            msg["Subject"] = subject
+        msg = self._build_message(to, subject, body, html)
+        ports_to_try = [self.smtp_port]
+        for p in (587, 2525, 465):
+            if p not in ports_to_try:
+                ports_to_try.append(p)
 
-            msg.attach(MIMEText(body, "plain"))
-            if html:
-                msg.attach(MIMEText(html, "html"))
+        last_error = None
+        for port in ports_to_try:
+            try:
+                self._send_via_smtp(port, msg)
+                logger.info(f"Email sent to {to} | Subject: {subject} | Port: {port}")
+                return {"status": "sent", "to": to, "subject": subject, "port": port}
+            except (socket.timeout, TimeoutError) as e:
+                last_error = f"timeout on port {port}: {e}"
+                logger.warning(f"Email timeout on {self.smtp_host}:{port} -> {e}")
+            except Exception as e:
+                last_error = f"{type(e).__name__} on port {port}: {e}"
+                logger.warning(f"Email attempt failed on {self.smtp_host}:{port} -> {e}")
 
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_pass)
-                server.send_message(msg)
-
-            logger.info(f"Email sent to {to} | Subject: {subject}")
-            return {"status": "sent", "to": to, "subject": subject}
-        except Exception as e:
-            logger.error(f"Email failed to {to}: {e}")
-            return {"status": "error", "to": to, "error": str(e)}
+        logger.error(f"Email failed to {to}: {last_error}")
+        return {"status": "error", "to": to, "error": last_error or "unknown email error"}
 
     def send_bulk(self, recipients: list[dict]) -> list[dict]:
-        """
-        Send emails to multiple recipients.
-
-        Args:
-            recipients: list of {'to': '...', 'subject': '...', 'body': '...', 'html': '...(optional)'}
-        """
         return [self.send(**r) for r in recipients]
