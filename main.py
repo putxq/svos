@@ -3,6 +3,7 @@ import json
 import os
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -2403,6 +2404,290 @@ async def my_hr_recommend(request: Request):
         pass
 
     return await hr.recommend_hiring(company_state=state.state, blueprint=bp)
+
+
+# ============================================================
+# CODER AGENT ENDPOINTS (Phase 8 — The Company Codes)
+# ============================================================
+from engines.coder_agent import CoderAgent
+
+
+@app.post('/my/coder/generate')
+async def my_coder_generate(body: dict, request: Request):
+    """
+    AI generates a Python script.
+    Body: {"task": "calculate monthly revenue from sales data", "context": "optional"}
+    """
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    task = body.get("task", "")
+    if not task:
+        raise HTTPException(400, "task is required")
+
+    coder = CoderAgent(customer_id=cid)
+    return await coder.generate_script(
+        task=task,
+        context=body.get("context", ""),
+    )
+
+
+@app.post('/my/coder/run/{script_id}')
+async def my_coder_run(script_id: str, body: dict, request: Request):
+    """Run a saved script. Body: {"input": {"key": "value"}} (optional)"""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    coder = CoderAgent(customer_id=cid)
+    return coder.run_script(script_id, input_data=body.get("input"))
+
+
+@app.post('/my/coder/execute')
+async def my_coder_execute(body: dict, request: Request):
+    """Run arbitrary code (sandboxed). Body: {"code": "print('hello')", "input": {}}"""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    code = body.get("code", "")
+    if not code:
+        raise HTTPException(400, "code is required")
+
+    coder = CoderAgent(customer_id=cid)
+    return coder.run_code(code, input_data=body.get("input"))
+
+
+@app.get('/my/coder/scripts')
+async def my_coder_scripts(request: Request):
+    """List all saved scripts."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    coder = CoderAgent(customer_id=cid)
+    return {"success": True, "scripts": coder.list_scripts()}
+
+
+@app.get('/my/coder/scripts/{script_id}')
+async def my_coder_get_script(script_id: str, request: Request):
+    """Get script code and metadata."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    coder = CoderAgent(customer_id=cid)
+    result = coder.get_script(script_id)
+    if not result:
+        raise HTTPException(404, "Script not found")
+    return {"success": True, **result}
+
+
+@app.delete('/my/coder/scripts/{script_id}')
+async def my_coder_delete_script(script_id: str, request: Request):
+    """Delete a saved script."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    coder = CoderAgent(customer_id=cid)
+    return coder.delete_script(script_id)
+
+
+# ============================================================
+# NOTIFICATION ENDPOINTS (Phase 9 — The Company Communicates)
+# ============================================================
+from engines.notifications import NotificationEngine
+
+
+@app.get('/my/notifications')
+async def my_notifications(request: Request):
+    """Get all notifications."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    engine = NotificationEngine(cid)
+    return {
+        "success": True,
+        "summary": engine.get_summary(),
+        "notifications": engine.get_all(limit=50),
+    }
+
+
+@app.get('/my/notifications/unread')
+async def my_notifications_unread(request: Request):
+    """Get unread notifications only."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    engine = NotificationEngine(cid)
+    return {"success": True, "unread": engine.get_unread()}
+
+
+@app.post('/my/notifications/{notification_id}/read')
+async def my_notification_read(notification_id: str, request: Request):
+    """Mark a notification as read."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    engine = NotificationEngine(cid)
+    read = engine.mark_read(notification_id)
+    if not read:
+        raise HTTPException(404, "Notification not found")
+    return {"success": True}
+
+
+@app.post('/my/notifications/read-all')
+async def my_notifications_read_all(request: Request):
+    """Mark all notifications as read."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    engine = NotificationEngine(cid)
+    count = engine.mark_all_read()
+    return {"success": True, "marked": count}
+
+
+# ============================================================
+# SYSTEM OVERVIEW ENDPOINT (Phase 10 — Hardening)
+# ============================================================
+@app.get('/my/system/health')
+async def my_system_health(request: Request):
+    """Full system health check for the customer."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    health = {"customer_id": cid, "checks": {}}
+
+    # Company State
+    try:
+        state = get_company_state(cid)
+        health["checks"]["company_state"] = {
+            "status": "ok",
+            "cycles": state.state.get("current_status", {}).get("cycles_completed", 0),
+            "phase": state.state.get("current_status", {}).get("phase", "unknown"),
+        }
+    except Exception as e:
+        health["checks"]["company_state"] = {"status": "error", "error": str(e)}
+
+    # LLM Config
+    try:
+        from core.tenant_llm_config import get_llm_status
+        llm_status = get_llm_status(cid)
+        health["checks"]["llm"] = {
+            "status": "ok" if llm_status.get("configured") else "not_configured",
+            "provider": llm_status.get("provider"),
+        }
+    except Exception as e:
+        health["checks"]["llm"] = {"status": "error", "error": str(e)}
+
+    # Blueprint
+    try:
+        from engines.blueprint_engine import load_blueprint
+        bp = load_blueprint(cid)
+        health["checks"]["blueprint"] = {
+            "status": "ok" if bp else "missing",
+            "industry": bp.get("industry", "") if bp else None,
+        }
+    except Exception as e:
+        health["checks"]["blueprint"] = {"status": "error", "error": str(e)}
+
+    # Notifications
+    try:
+        ne = NotificationEngine(cid)
+        summary = ne.get_summary()
+        health["checks"]["notifications"] = {
+            "status": "ok",
+            "unread": summary.get("unread", 0),
+            "urgent": summary.get("urgent", 0),
+        }
+    except Exception as e:
+        health["checks"]["notifications"] = {"status": "error", "error": str(e)}
+
+    # Pending approvals
+    try:
+        state = get_company_state(cid)
+        pending = state.get_pending_approvals()
+        health["checks"]["approvals"] = {
+            "status": "ok" if len(pending) < 10 else "attention",
+            "pending": len(pending),
+        }
+    except Exception as e:
+        health["checks"]["approvals"] = {"status": "error", "error": str(e)}
+
+    # Overall
+    statuses = [c.get("status", "unknown") for c in health["checks"].values()]
+    if all(s == "ok" for s in statuses):
+        health["overall"] = "healthy"
+    elif any(s == "error" for s in statuses):
+        health["overall"] = "degraded"
+    else:
+        health["overall"] = "attention_needed"
+
+    health["checked_at"] = datetime.utcnow().isoformat()
+    return {"success": True, "health": health}
+
+
+@app.get('/my/system/stats')
+async def my_system_stats(request: Request):
+    """Overall system statistics for dashboard."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    stats = {}
+    try:
+        state = get_company_state(cid)
+        s = state.state
+        stats["cycles"] = s.get("current_status", {}).get("cycles_completed", 0)
+        stats["decisions"] = len(s.get("decisions", []))
+        stats["lessons"] = len(s.get("lessons", []))
+        stats["kpis"] = s.get("kpis", {})
+        stats["pending_approvals"] = len(state.get_pending_approvals())
+        stats["meetings"] = len(s.get("meetings", []))
+    except Exception:
+        pass
+
+    try:
+        from engines.hr_engine import HREngine
+        hr = HREngine(customer_id=cid)
+        active = [a for a in hr.get_roster() if a.get("status") == "active"]
+        stats["hired_agents"] = len(active)
+    except Exception:
+        stats["hired_agents"] = 0
+
+    try:
+        coder = CoderAgent(customer_id=cid)
+        stats["scripts"] = len(coder.list_scripts())
+    except Exception:
+        stats["scripts"] = 0
+
+    try:
+        ne = NotificationEngine(cid)
+        stats["unread_notifications"] = ne.get_summary().get("unread", 0)
+    except Exception:
+        stats["unread_notifications"] = 0
+
+    return {"success": True, "stats": stats}
+
 
 
 
