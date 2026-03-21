@@ -1348,3 +1348,121 @@ async def billing_customers():
     mgr = get_subscription_manager()
     subs = mgr.list_all()
     return {"success": True, "total": len(subs), "customers": subs}
+
+# ============================================================
+# MCP PROTOCOL ENDPOINTS
+# ============================================================
+from infrastructure.mcp_server import build_mcp_server
+
+_mcp_server = None
+
+
+def get_mcp_server():
+    global _mcp_server
+    if _mcp_server is None:
+        _mcp_server = build_mcp_server()
+    return _mcp_server
+
+
+@app.get('/mcp/tools')
+async def mcp_list_tools():
+    """List all SVOS tools in MCP format."""
+    server = get_mcp_server()
+    return {"tools": server.list_tools()}
+
+
+@app.post('/mcp/tools/call')
+async def mcp_call_tool(body: dict):
+    """Call an SVOS tool via MCP protocol."""
+    server = get_mcp_server()
+    name = body.get("name", "")
+    arguments = body.get("arguments", {})
+    result = await server.call_tool(name, arguments)
+    return result
+
+
+@app.post('/mcp/rpc')
+async def mcp_json_rpc(body: dict):
+    """Handle MCP JSON-RPC requests (initialize, tools/list, tools/call)."""
+    server = get_mcp_server()
+    return server.handle_request(body)
+
+
+# ============================================================
+# A2A PROTOCOL ENDPOINTS
+# ============================================================
+from infrastructure.a2a_protocol import get_a2a_handler
+
+
+@app.get('/.well-known/agent.json')
+async def a2a_well_known():
+    """A2A discovery endpoint - returns list of all agent cards."""
+    handler = get_a2a_handler()
+    return {
+        "name": "SVOS - Sovereign Virtual Operating System",
+        "description": "AI-powered autonomous digital company platform with 9 C-suite agents",
+        "url": "https://svos.ai",
+        "version": "1.0.0",
+        "capabilities": {
+            "streaming": False,
+            "pushNotifications": False,
+        },
+        "agents": handler.list_agent_cards(),
+    }
+
+
+@app.get('/a2a/agents')
+async def a2a_list_agents():
+    """List all SVOS agents with their A2A cards."""
+    handler = get_a2a_handler()
+    return {"agents": handler.list_agent_cards()}
+
+
+@app.get('/a2a/agents/{role}')
+async def a2a_agent_card(role: str):
+    """Get A2A agent card for a specific role."""
+    handler = get_a2a_handler()
+    card = handler.get_agent_card(role)
+    if not card:
+        raise HTTPException(404, f"Agent '{role}' not found")
+    return card
+
+
+@app.post('/a2a/tasks')
+async def a2a_create_task(body: dict):
+    """
+    Create and execute an A2A task.
+    Body:
+    {
+      "agent": "CEO",
+      "message": "Analyze the Saudi restaurant market",
+      "metadata": {}
+    }
+    """
+    agent_role = body.get("agent", "CEO")
+    message = body.get("message", "")
+    metadata = body.get("metadata", {})
+
+    if not message:
+        raise HTTPException(400, "message is required")
+
+    handler = get_a2a_handler()
+    task = await handler.create_task(agent_role, message, metadata)
+    return {"task": task.to_dict()}
+
+
+@app.get('/a2a/tasks/{task_id}')
+async def a2a_get_task(task_id: str):
+    """Get status and results of an A2A task."""
+    handler = get_a2a_handler()
+    task = handler.get_task(task_id)
+    if not task:
+        raise HTTPException(404, f"Task '{task_id}' not found")
+    return {"task": task.to_dict()}
+
+
+@app.get('/a2a/tasks')
+async def a2a_list_tasks():
+    """List recent A2A tasks."""
+    handler = get_a2a_handler()
+    return {"tasks": handler.list_tasks()}
