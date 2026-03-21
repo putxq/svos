@@ -1,0 +1,31 @@
+{
+  "contacts": {
+    "ac0fd1c2fd": {
+      "id": "ac0fd1c2fd",
+      "name": "Mohammed Al-Rashidi",
+      "email": "m@restaurant.sa",
+      "phone": "",
+      "company": "Al Rashidi Restaurants",
+      "source": "website",
+      "notes": "Chain of 5 restaurants in Riyadh, interested in digital marketing",
+      "value_estimate": "50000 SAR/year",
+      "stage": "lead",
+      "score": 0,
+      "created_at": "2026-03-20T13:46:45.691293",
+      "updated_at": "2026-03-20T13:46:45.691304",
+      "next_action": "Initial outreach",
+      "assigned_to": "CMO",
+      "tags": []
+    }
+  },
+  "interactions": {
+    "ac0fd1c2fd": [
+      {
+        "action": "created",
+        "details": "Lead added from website: Mohammed Al-Rashidi",
+        "timestamp": "2026-03-20T13:46:45.691315"
+      }
+    ]
+  },
+  "updated_at": "2026-03-20T13:46:45.691320"
+}
