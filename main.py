@@ -1180,3 +1180,31 @@ async def scheduler_history_v2():
         "recent": s.cycle_history[-5:] if s.cycle_history else [],
         "errors": s.errors[-10:] if s.errors else [],
     }
+
+# ============================================================
+# CONFIDENCE ENGINE ENDPOINT
+# ============================================================
+@app.post('/dashboard/confidence')
+async def dashboard_confidence(body: dict):
+    """Calculate confidence score for a decision."""
+    from engines.confidence_engine import ConfidenceEngine
+
+    decision = body.get("decision", "")
+    context = body.get("context", {})
+    raw_confidence = body.get("confidence", None)
+
+    if raw_confidence is not None:
+        result = ConfidenceEngine.evaluate(raw_confidence, context=decision)
+        return {"success": True, "evaluation": result}
+
+    try:
+        from engines.time_engine import TimeEngine
+
+        engine = TimeEngine()
+        sim = await engine.should_proceed(decision, context)
+        conf = sim.get("avg_confidence", 0.5)
+        result = ConfidenceEngine.evaluate(conf, context=decision)
+        result["simulation"] = sim
+        return {"success": True, "evaluation": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

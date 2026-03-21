@@ -1,5 +1,6 @@
 ﻿import asyncio
 import json
+from core.json_parser import parse_llm_json
 import logging
 import os
 import time
@@ -85,7 +86,10 @@ class LLMAdapter(ABC):
             max_tokens=2048,
         )
         try:
-            return json.loads(raw)
+            parsed = parse_llm_json(raw)
+            if parsed is None:
+                raise ValueError(f'Failed to parse LLM response as JSON: {raw[:200]}')
+            return parsed
         except Exception:
             return {"raw": raw, "_parse_error": True}
 
@@ -484,3 +488,4 @@ class LLMProvider:
             lambda: self.adapter.complete_structured(system_prompt, user_message, output_schema, temperature=0.2),
             operation="complete_structured",
         )
+
