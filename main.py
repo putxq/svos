@@ -87,7 +87,7 @@ app.add_middleware(
 )
 
 PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp", "/my")
-PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers"}
+PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries"}
 PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
 
 
@@ -1577,12 +1577,13 @@ async def onboard(body: dict):
     if not customer_id or not email:
         raise HTTPException(400, "customer_id and email required")
 
-    result = onboard_customer(
+    result = await onboard_customer(
         customer_id=customer_id,
         email=email,
         plan_id=body.get("plan_id", "starter"),
         company_name=body.get("company_name", ""),
         company_description=body.get("company_description", ""),
+        goal=body.get("goal", "growth"),
         mission=body.get("mission", ""),
         vision=body.get("vision", ""),
         values=body.get("values"),
@@ -1938,6 +1939,120 @@ async def my_company_controls(body: dict, request: Request):
 
     state.save()
     return {"success": True, "controls": controls}
+
+
+# ============================================================
+# BLUEPRINT ENDPOINTS (Phase 2 — The Company Adapts)
+# ============================================================
+from engines.blueprint_engine import (
+    load_blueprint, generate_and_save_blueprint, INDUSTRY_SEEDS,
+)
+
+
+@app.get('/my/blueprint')
+async def my_blueprint(request: Request):
+    """Get the current business blueprint."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    bp = load_blueprint(cid)
+    if not bp:
+        return {"success": False, "error": "No blueprint found. Run onboarding or POST /my/blueprint/generate"}
+    return {"success": True, "blueprint": bp}
+
+
+@app.post('/my/blueprint/generate')
+async def my_blueprint_generate(body: dict, request: Request):
+    """Generate or regenerate the business blueprint."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    industry = body.get("industry", "general")
+    goal = body.get("goal", "growth")
+    if not industry:
+        raise HTTPException(400, "industry is required")
+
+    blueprint = await generate_and_save_blueprint(
+        customer_id=cid,
+        industry=industry,
+        goal=goal,
+        company_name=body.get("company_name", ""),
+        company_description=body.get("company_description", ""),
+        mission=body.get("mission", ""),
+        vision=body.get("vision", ""),
+        values=body.get("values"),
+        country=body.get("country", "Saudi Arabia"),
+        risk_appetite=body.get("risk_appetite", "moderate"),
+        use_ai=body.get("use_ai", True),
+    )
+    return {"success": True, "blueprint": blueprint}
+
+
+@app.post('/my/blueprint/enhance')
+async def my_blueprint_enhance(request: Request):
+    """AI-enhance an existing blueprint using the customer's LLM key."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    bp = load_blueprint(cid)
+    if not bp:
+        raise HTTPException(404, "No blueprint found. Generate one first.")
+
+    try:
+        enhanced = await generate_and_save_blueprint(
+            customer_id=cid,
+            industry=bp.get("industry", "general"),
+            goal=bp.get("goal", "growth"),
+            company_name=bp.get("company_name", ""),
+            company_description=bp.get("company_description", ""),
+            mission=bp.get("identity", {}).get("mission", ""),
+            vision=bp.get("identity", {}).get("vision", ""),
+            values=bp.get("identity", {}).get("values"),
+            country=bp.get("country", "Saudi Arabia"),
+            risk_appetite=bp.get("risk_appetite", "moderate"),
+            use_ai=True,
+        )
+        return {"success": True, "enhanced": True, "blueprint": enhanced}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get('/my/blueprint/workflows')
+async def my_blueprint_workflows(request: Request):
+    """Get active workflows from blueprint."""
+    auth = getattr(request.state, "auth", {})
+    cid = auth.get("customer_id", "")
+    if not cid:
+        raise HTTPException(401, "auth required")
+
+    bp = load_blueprint(cid)
+    if not bp:
+        return {"success": False, "workflows": {}}
+
+    workflows = bp.get("workflows", {})
+    active = {k: v for k, v in workflows.items() if isinstance(v, dict) and v.get("active")}
+    return {"success": True, "workflows": workflows, "active_count": len(active)}
+
+
+@app.get('/blueprint/industries')
+async def blueprint_industries():
+    """List supported industries with seed templates (public endpoint)."""
+    industries = []
+    for key, seed in INDUSTRY_SEEDS.items():
+        industries.append({
+            "id": key,
+            "kpis_count": len(seed.get("kpis", [])),
+            "workflows_count": len(seed.get("workflows", {})),
+            "challenges": seed.get("challenges", []),
+        })
+    return {"success": True, "industries": industries}
+
 
 
 

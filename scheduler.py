@@ -213,11 +213,22 @@ class SVOSScheduler:
         try:
             from engines.gravity_engine import GravityEngine
 
+            # Use blueprint context for domain-specific scan
+            scan_query = "Saudi Arabia digital transformation SME automation AI solutions 2026"
+            company_state = getattr(self, "_company_state", None)
+            if company_state:
+                identity = company_state.state.get("identity", {})
+                industry = identity.get("industry", "")
+                goal = identity.get("goal", "")
+                company = identity.get("company_name", "")
+                if industry and industry != "general":
+                    scan_query = f"{industry} market trends opportunities {goal} Saudi Arabia 2026"
+                    if company:
+                        scan_query = f"{company} {scan_query}"
+
             engine = GravityEngine()
-            result = await engine.find_demand_gravity(
-                "Saudi Arabia digital transformation SME automation AI solutions 2026"
-            )
-            return {"status": "done", "opportunities": str(result)[:500]}
+            result = await engine.find_demand_gravity(scan_query)
+            return {"status": "done", "opportunities": str(result)[:500], "query": scan_query}
         except Exception as e:
             logger.error(f"Market scan error: {e}")
             return {"status": "error", "error": str(e)}
@@ -232,12 +243,30 @@ class SVOSScheduler:
                 "briefing": previous_phases.get("briefing", {}).get("summary", ""),
                 "market": previous_phases.get("market_scan", {}).get("opportunities", ""),
             }
+
+            # Add company context to decision
+            state_context = getattr(self, "_current_state_context", "")
+            if state_context:
+                context["company_state"] = state_context
+
             decision_prompt = (
                 "Based on today's briefing and market scan, "
-                "what is the single most impactful action to take today?"
+                "what is the single most impactful action to take today? "
+                "Be specific to the company's industry and current priorities."
             )
             result = await engine.should_proceed(decision_prompt, context)
-            return {"status": "done", "decision": str(result)[:500]}
+            decision_text = str(result)[:500]
+
+            # Record decision in Company State
+            company_state = getattr(self, "_company_state", None)
+            if company_state:
+                company_state.record_decision(
+                    decision=decision_text[:300],
+                    agent="CEO",
+                    expected_outcome="Improve performance based on today's analysis",
+                )
+
+            return {"status": "done", "decision": decision_text}
         except Exception as e:
             logger.error(f"Decision phase error: {e}")
             return {"status": "error", "error": str(e)}

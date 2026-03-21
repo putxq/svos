@@ -14,12 +14,13 @@ from core.tenant import init_tenant_workspace
 logger = logging.getLogger("svos.onboarding")
 
 
-def onboard_customer(
+async def onboard_customer(
     customer_id: str,
     email: str,
     plan_id: str = "starter",
     company_name: str = "",
     company_description: str = "",
+    goal: str = "growth",
     mission: str = "",
     vision: str = "",
     values: list[str] | None = None,
@@ -102,7 +103,39 @@ def onboard_customer(
         errors.append(f"DNA init failed: {str(e)}")
         logger.warning(f"[onboard] DNA init error: {e}")
 
-    # ── Step 6: Build onboarding summary ──
+    # ── Step 6: Generate Business Blueprint ──
+    blueprint_result = {}
+    try:
+        from engines.blueprint_engine import generate_blueprint, save_blueprint, apply_blueprint_to_state
+
+        # Generate without AI if no LLM key yet (seed template only)
+        blueprint = await generate_blueprint(
+            industry=industry,
+            goal=goal or "growth",
+            company_name=company_name,
+            company_description=company_description,
+            mission=mission,
+            vision=vision,
+            values=values,
+            country=country,
+            risk_appetite=risk_appetite,
+            llm_provider=None,  # AI enhancement happens later via /my/blueprint/enhance
+        )
+        save_blueprint(customer_id, blueprint)
+        apply_blueprint_to_state(customer_id, blueprint)
+        blueprint_result = {
+            "status": "generated",
+            "industry": industry,
+            "ai_enhanced": blueprint.get("ai_enhanced", False),
+            "workflows_active": sum(1 for w in blueprint.get("workflows", {}).values()
+                                    if isinstance(w, dict) and w.get("active")),
+        }
+        logger.info(f"[onboard] Blueprint generated for {customer_id}")
+    except Exception as e:
+        errors.append(f"Blueprint generation failed: {str(e)}")
+        logger.warning(f"[onboard] Blueprint error: {e}")
+
+    # ── Step 7: Build onboarding summary ──
     plan_details = sub_result.get("subscription", {})
 
     return {
@@ -118,6 +151,7 @@ def onboard_customer(
         "llm": llm_result if llm_result else {"status": "not_configured", "message": "Add your LLM key later in settings"},
         "workspace": workspace,
         "company_dna": dna_result if dna_result else {"status": "skipped"},
+        "blueprint": blueprint_result if blueprint_result else {"status": "skipped"},
         "company_name": company_name,
         "dashboard_url": f"/dashboard?key={api_key}",
         "next_steps": [
