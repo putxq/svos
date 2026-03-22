@@ -89,7 +89,7 @@ app.add_middleware(
 )
 
 PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp", "/my")
-PUBLIC_EXACT = {"/", "/health", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries", "/meetings/types"}
+PUBLIC_EXACT = {"/", "/health", "/dashboard", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries", "/meetings/types"}
 PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
 
 
@@ -2687,6 +2687,7 @@ async def my_system_stats(request: Request):
         stats["unread_notifications"] = 0
 
     return {"success": True, "stats": stats}
+
 
 
 
