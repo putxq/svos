@@ -407,6 +407,74 @@ body {
 .feed-dot.amber { background: var(--amber); }
 .feed-dot.red { background: var(--red); }
 
+/* ── CHAT ── */
+.chat-wrap {
+  display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h) - 56px);
+  min-height: 500px;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.chat-msg { display: flex; gap: 10px; max-width: 80%; animation: fadeIn 0.2s ease; }
+.chat-msg.user { flex-direction: row-reverse; margin-right: auto; margin-left: 0; align-self: flex-start; }
+.chat-msg.bot { align-self: flex-start; }
+.chat-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.chat-avatar.user-av { background: linear-gradient(135deg,var(--accent),var(--purple)); color:white; font-size:13px; font-weight:700; }
+.chat-avatar.bot-av { background: var(--green-light); }
+.chat-bubble {
+  padding: 11px 15px; border-radius: 14px;
+  font-size: 14px; line-height: 1.55; max-width: 100%;
+}
+.chat-msg.user .chat-bubble { background: var(--accent); color: white; border-radius: 14px 4px 14px 14px; }
+.chat-msg.bot .chat-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); border-radius: 4px 14px 14px 14px; }
+.chat-agent-name { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+.chat-input-bar {
+  display: flex; gap: 8px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 var(--radius) var(--radius);
+}
+.chat-input {
+  flex: 1; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; font-family: var(--font-ar);
+  background: var(--surface-2); color: var(--text-primary);
+  transition: border-color 0.15s;
+}
+.chat-input:focus { outline: none; border-color: var(--accent); }
+.chat-send {
+  padding: 10px 18px; background: var(--accent); color: white;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-ar); transition: all 0.15s;
+  white-space: nowrap;
+}
+.chat-send:hover { background: #2563EB; }
+.chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.chat-agent-selector {
+  display: flex; gap: 6px; padding: 12px 16px 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-bottom: none; flex-wrap: wrap;
+}
+.agent-chip {
+  padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.agent-chip.selected { background: var(--accent); color: white; border-color: var(--accent); }
+.typing { display: flex; gap: 4px; align-items: center; padding: 8px 14px; }
+.typing span { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
 .feed-content { flex: 1; }
 .feed-title { font-size: 13px; font-weight: 500; color: var(--text-primary); line-height: 1.4; }
 .feed-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
@@ -707,6 +775,11 @@ body {
       <span class="nav-icon">📊</span> سجل النشاط
     </a>
 
+    <div class="nav-section-label">التواصل</div>
+    <a class="nav-item" onclick="showPage('chat')" href="#">
+      <span class="nav-icon">💬</span> الشات
+    </a>
+
     <div class="nav-section-label">الإعدادات</div>
     <a class="nav-item" onclick="showPage('settings')" href="#">
       <span class="nav-icon">⚙️</span> الإعدادات
@@ -989,6 +1062,36 @@ body {
           <div class="empty-title">لا يوجد نشاط بعد</div>
           <div class="empty-desc">شغّل دورة لرؤية سجل العمليات</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ -->
+  <!-- PAGE: CHAT                    -->
+  <!-- ══════════════════════════════ -->
+  <div class="page" id="page-chat">
+    <div class="section-title">محادثة مع مجلس الإدارة</div>
+    <div class="card chat-wrap">
+      <div class="chat-agent-selector" id="agent-selector">
+        <div class="agent-chip selected" data-agent="board" onclick="selectAgent(this,'board')">🏛️ مجلس الإدارة</div>
+        <div class="agent-chip" data-agent="CEO" onclick="selectAgent(this,'CEO')">👑 CEO</div>
+        <div class="agent-chip" data-agent="CFO" onclick="selectAgent(this,'CFO')">💰 CFO</div>
+        <div class="agent-chip" data-agent="CTO" onclick="selectAgent(this,'CTO')">🔧 CTO</div>
+        <div class="agent-chip" data-agent="CMO" onclick="selectAgent(this,'CMO')">📢 CMO</div>
+        <div class="agent-chip" data-agent="COO" onclick="selectAgent(this,'COO')">⚙️ COO</div>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg bot">
+          <div class="chat-avatar bot-av">🏛️</div>
+          <div>
+            <div class="chat-agent-name">مجلس الإدارة — SVOS</div>
+            <div class="chat-bubble">مرحباً، أنا مجلس الإدارة التنفيذي لـ SVOS. كيف يمكنني مساعدتك اليوم؟ يمكنك سؤالي عن استراتيجية الشركة، السوق، القرارات المالية، أو أي موضوع تنفيذي.</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-bar">
+        <input class="chat-input" id="chat-input" placeholder="اكتب رسالتك هنا..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}">
+        <button class="chat-send" id="chat-send-btn" onclick="sendChat()">إرسال ⟵</button>
       </div>
     </div>
   </div>
@@ -1277,14 +1380,15 @@ function showPage(id) {
 
   const navMap = {
     overview: 0, agents: 1, cycles: 2,
-    decisions: 3, meetings: 4, activity: 5, settings: 6
+    decisions: 3, meetings: 4, activity: 5, chat: 6, settings: 7
   };
   const items = document.querySelectorAll('.nav-item');
   if (items[navMap[id]]) items[navMap[id]].classList.add('active');
 
   const titles = {
     overview: 'لوحة التحكم', agents: 'الوكلاء', cycles: 'دورات التشغيل',
-    decisions: 'القرارات', meetings: 'الاجتماعات', activity: 'سجل النشاط', settings: 'الإعدادات'
+    decisions: 'القرارات', meetings: 'الاجتماعات', activity: 'سجل النشاط',
+    chat: 'الشات', settings: 'الإعدادات'
   };
   document.getElementById('page-title').textContent = titles[id] || id;
 }
@@ -1314,6 +1418,91 @@ function toast(msg) {
   t.classList.add('show');
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── CHAT ──
+let selectedAgent = 'board';
+
+function selectAgent(el, agent) {
+  document.querySelectorAll('.agent-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedAgent = agent;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  document.getElementById('chat-send-btn').disabled = true;
+
+  // Add user message
+  appendMsg('user', msg, 'أنت');
+
+  // Show typing
+  const typingId = 'typing-' + Date.now();
+  document.getElementById('chat-messages').insertAdjacentHTML('beforeend', `
+    <div class="chat-msg bot" id="${typingId}">
+      <div class="chat-avatar bot-av">${agentIcon(selectedAgent)}</div>
+      <div><div class="chat-agent-name">${agentLabel(selectedAgent)}</div>
+      <div class="chat-bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>
+    </div>
+  `);
+  scrollChat();
+
+  try {
+    let endpoint, body;
+    if (selectedAgent === 'board') {
+      endpoint = '/dashboard/agent-chat';
+      body = { message: msg, agent_id: 'board' };
+    } else {
+      endpoint = '/dashboard/agent-chat';
+      body = { message: msg, agent_id: selectedAgent };
+    }
+
+    const res = await api(endpoint, 'POST', body);
+    document.getElementById(typingId)?.remove();
+
+    const reply = res.response || res.reply || res.message || res.output || JSON.stringify(res);
+    appendMsg('bot', reply, agentLabel(selectedAgent), agentIcon(selectedAgent));
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', 'حدث خطأ في الاتصال. تحقق من مفتاح API.', 'النظام', '⚠️');
+  }
+
+  document.getElementById('chat-send-btn').disabled = false;
+  scrollChat();
+}
+
+function appendMsg(type, text, name, icon='') {
+  const isUser = type === 'user';
+  const html = `
+    <div class="chat-msg ${type}">
+      <div class="chat-avatar ${isUser ? 'user-av' : 'bot-av'}">${isUser ? (name[0]||'أ') : icon}</div>
+      <div>
+        <div class="chat-agent-name">${name}</div>
+        <div class="chat-bubble">${text}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('chat-messages').insertAdjacentHTML('beforeend', html);
+  scrollChat();
+}
+
+function scrollChat() {
+  const el = document.getElementById('chat-messages');
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+function agentIcon(a) {
+  const m = {'board':'🏛️','CEO':'👑','CFO':'💰','CTO':'🔧','CMO':'📢','COO':'⚙️'};
+  return m[a] || '🤖';
+}
+
+function agentLabel(a) {
+  const m = {'board':'مجلس الإدارة','CEO':'الرئيس التنفيذي','CFO':'المدير المالي','CTO':'المدير التقني','CMO':'مدير التسويق','COO':'مدير العمليات'};
+  return m[a] || a;
 }
 
 // ── ENTER ──

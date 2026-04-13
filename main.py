@@ -67,7 +67,50 @@ validator = ConstitutionValidator()
 async def lifespan(_: FastAPI):
     await registry.init()
     await port_manager.init()
+    # Auto-configure LLM from env vars on startup
+    await _auto_configure_llm()
+    # Auto-start scheduler if env says so
+    if os.getenv("SCHEDULER_AUTO_START", "true").lower() == "true":
+        try:
+            from scheduler import get_scheduler
+            s = get_scheduler()
+            hours = float(os.getenv("SCHEDULER_CYCLE_HOURS", "6"))
+            s.cycle_hours = hours
+            await s.start()
+        except Exception as e:
+            pass
     yield
+
+
+async def _auto_configure_llm():
+    """Auto-configure tenant LLM from environment variables on startup."""
+    try:
+        provider = os.getenv("LLM_PROVIDER", "")
+        if not provider:
+            return
+        key_map = {
+            "gemini": os.getenv("GEMINI_API_KEY"),
+            "anthropic": os.getenv("ANTHROPIC_API_KEY"),
+            "openai": os.getenv("OPENAI_API_KEY"),
+        }
+        model_map = {
+            "gemini": os.getenv("GEMINI_MODEL", "gemini-flash-latest"),
+            "anthropic": os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"),
+            "openai": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        }
+        api_key = key_map.get(provider)
+        if not api_key:
+            return
+        from core.tenant import get_tenant_dir
+        import json
+        tenant_dir = get_tenant_dir("admin")
+        os.makedirs(tenant_dir, exist_ok=True)
+        llm_cfg_path = os.path.join(tenant_dir, "llm_config.json")
+        cfg = {"provider": provider, "api_key": api_key, "model": model_map.get(provider, "")}
+        with open(llm_cfg_path, "w") as f:
+            json.dump(cfg, f)
+    except Exception:
+        pass
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
