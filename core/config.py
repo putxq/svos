@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # Google (Gemini)
     gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-2.0-flash", validation_alias="GEMINI_MODEL")
+    gemini_model: str = Field(default="gemini-flash-latest", validation_alias="GEMINI_MODEL")
 
     # Ollama (محلي — اختياري)
     ollama_base_url: str = Field(default="http://localhost:11434", validation_alias="OLLAMA_BASE_URL")

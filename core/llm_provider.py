@@ -249,15 +249,9 @@ class OpenAIAdapter(LLMAdapter):
 class GeminiAdapter(LLMAdapter):
     name = "gemini"
 
-    def __init__(self, api_key: str | None, model: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str | None, model: str = "gemini-2.5-flash"):
         if not api_key:
-            raise ValueError(
-                "\n╔══════════════════════════════════════════════════╗\n"
-                "║ GEMINI_API_KEY is missing!                     ║\n"
-                "║ Get your key: https://aistudio.google.com      ║\n"
-                "║ Add to .env: GEMINI_API_KEY=AI...              ║\n"
-                "╚══════════════════════════════════════════════════╝"
-            )
+            raise ValueError("GEMINI_API_KEY is missing")
         self.api_key = api_key
         self.model = model
 
@@ -454,9 +448,13 @@ class LLMProvider:
             )
 
         if p == "gemini":
+            key = (tc or {}).get("api_key") or self._env("GEMINI_API_KEY")
+            if not key:
+                logger.warning("GEMINI_API_KEY not set — running in dry-run mode")
+                return DryRunAdapter()
             return GeminiAdapter(
-                api_key=(tc or {}).get("api_key") or self._env("GEMINI_API_KEY"),
-                model=(tc or {}).get("model") or self._env("GEMINI_MODEL") or "gemini-2.0-flash",
+                api_key=key,
+                model=(tc or {}).get("model") or self._env("GEMINI_MODEL") or "gemini-flash-latest",
             )
 
         if p == "ollama":
