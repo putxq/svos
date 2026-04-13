@@ -100,13 +100,7 @@ class AnthropicAdapter(LLMAdapter):
 
     def __init__(self, api_key: str | None, model: str = "claude-haiku-4-5-20251001"):
         if not api_key:
-            raise ValueError(
-                "\n╔══════════════════════════════════════════════════╗\n"
-                "║ ANTHROPIC_API_KEY is missing!                  ║\n"
-                "║ Get your key: https://console.anthropic.com   ║\n"
-                "║ Add to .env: ANTHROPIC_API_KEY=sk-ant-...     ║\n"
-                "╚══════════════════════════════════════════════════╝"
-            )
+            raise ValueError("ANTHROPIC_API_KEY is missing")
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
 
@@ -338,6 +332,17 @@ class OllamaAdapter(LLMAdapter):
             )
 
 
+# ----- Dry-Run Adapter (no API key needed) -----
+class DryRunAdapter(LLMAdapter):
+    name = "dry_run"
+
+    async def complete(self, system_prompt, user_message, temperature=0.7, max_tokens=2048) -> str:
+        return (
+            '{"status":"dry_run","message":"Add ANTHROPIC_API_KEY to .env to enable real AI responses.",'
+            '"action":"Configure API key at /dashboard"}'
+        )
+
+
 # =====================================================================
 # LLMProvider — الموزع الذكي
 # =====================================================================
@@ -433,8 +438,12 @@ class LLMProvider:
         tc = self._tenant_config  # None if using global
 
         if p == "anthropic":
+            key = (tc or {}).get("api_key") or self._env("ANTHROPIC_API_KEY")
+            if not key:
+                logger.warning("ANTHROPIC_API_KEY not set — running in dry-run mode")
+                return DryRunAdapter()
             return AnthropicAdapter(
-                api_key=(tc or {}).get("api_key") or self._env("ANTHROPIC_API_KEY"),
+                api_key=key,
                 model=(tc or {}).get("model") or self._env("ANTHROPIC_MODEL") or "claude-haiku-4-5-20251001",
             )
 

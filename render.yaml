@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: svos
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SVOS_MASTER_KEY
+        sync: false
+      - key: SVOS_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: anthropic
+      - key: ENVIRONMENT
+        value: production
