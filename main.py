@@ -149,7 +149,13 @@ async def api_key_middleware(request: Request, call_next):
 
     if any(path.startswith(p) for p in PROTECTED_PREFIXES):
         key = request.headers.get("x-api-key", "")
-        auth = verify_customer_api_key(key)
+        # Accept master key directly — works across deploys without DB
+        import secrets as _sec
+        _master = os.getenv("SVOS_MASTER_KEY", "").strip()
+        if _master and key and _sec.compare_digest(key, _master):
+            auth = {"ok": True, "is_master": True, "customer_id": "master", "source": "master"}
+        else:
+            auth = verify_customer_api_key(key)
         if not auth.get("ok"):
             log_activity("", request.method, path, 401, detail=auth.get("reason", ""))
             return JSONResponse(status_code=401, content={"error": "unauthorized", "reason": auth.get("reason", "invalid_api_key")})
