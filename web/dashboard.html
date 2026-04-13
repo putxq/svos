@@ -1464,19 +1464,18 @@ async function sendChat() {
   scrollChat();
 
   try {
-    let endpoint, body;
-    if (selectedAgent === 'board') {
-      endpoint = '/dashboard/agent-chat';
-      body = { message: msg, agent_id: 'board' };
-    } else {
-      endpoint = '/dashboard/agent-chat';
-      body = { message: msg, agent_id: selectedAgent };
-    }
-
-    const res = await api(endpoint, 'POST', body);
+    const agentId = selectedAgent === 'board' ? 'ceo' : selectedAgent.toLowerCase();
+    const res = await api('/dashboard/agent-chat', 'POST', {
+      message: msg,
+      agent_id: agentId,
+      company_name: 'SVOS',
+      description: 'نظام تشغيل الأعمال المستقل',
+      goal: 'النمو والتوسع',
+      risk: 'moderate'
+    });
     document.getElementById(typingId)?.remove();
 
-    const reply = res.response || res.reply || res.message || res.output || JSON.stringify(res);
+    const reply = res.reply || res.response || res.message || res.output || JSON.stringify(res);
     appendMsg('bot', reply, agentLabel(selectedAgent), agentIcon(selectedAgent));
   } catch(e) {
     document.getElementById(typingId)?.remove();
