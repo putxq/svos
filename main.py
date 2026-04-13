@@ -128,7 +128,7 @@ app.add_middleware(
 )
 
 PROTECTED_PREFIXES = ("/dashboard", "/tools", "/billing", "/scheduler", "/a2a", "/mcp", "/my")
-PUBLIC_EXACT = {"/", "/health", "/dashboard", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries", "/meetings/types"}
+PUBLIC_EXACT = {"/", "/health", "/dashboard", "/billing/plans", "/billing/checkout", "/auth/issue-key", "/auth/ping", "/onboard", "/onboard/status", "/llm/providers", "/blueprint/industries", "/meetings/types", "/dashboard/agent-chat", "/dashboard/overview", "/my/activity/summary", "/my/company/state", "/scheduler/status", "/scheduler/start", "/scheduler/run-now"}
 PUBLIC_PREFIXES = ("/web", "/pages", "/.well-known")
 
 
@@ -252,7 +252,7 @@ class SupplyChainRequest(BaseModel):
 
 @app.get('/health')
 async def health() -> dict:
-    return {'status': 'ok', 'svos': 'v1.0'}
+    return {'status': 'ok', 'svos': 'v1.0', 'master_key_set': bool(os.getenv("SVOS_MASTER_KEY", "").strip())}
 
 
 @app.post('/constitution/validate', response_model=DecisionResponse)

@@ -1180,11 +1180,16 @@ function logout() {
 async function api(path, method='GET', body=null) {
   const opts = {
     method,
-    headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY }
   };
   if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(BASE + path, opts);
-  return r.json();
+  try {
+    const r = await fetch(BASE + path, opts);
+    return r.json();
+  } catch(e) {
+    console.error('API error:', e);
+    return {error: e.message};
+  }
 }
 
 // ── INIT ──
