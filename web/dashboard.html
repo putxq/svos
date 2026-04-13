@@ -1153,7 +1153,19 @@ async function doLogin() {
     if (!res.ok) throw new Error('لا يمكن الوصول للخادم');
 
     BASE = server.replace(/\/$/, '');
-    API_KEY = key;
+
+    // Try to issue a fresh svos_ key using master key, fallback to using key directly
+    try {
+      const issueRes = await fetch(`${server.replace(/\/$/,'')}/auth/issue-key`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({master_key: key, customer_id: 'admin', label: 'dashboard'})
+      });
+      const issued = await issueRes.json();
+      API_KEY = issued.success ? issued.issued.api_key : key;
+    } catch(e) {
+      API_KEY = key;
+    }
 
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('setting-server').value = BASE;
