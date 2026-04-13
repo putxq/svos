@@ -65,5 +65,22 @@ class Settings(BaseSettings):
     smtp_pass: str = Field(default="", validation_alias="SMTP_PASS")
     smtp_from: str = Field(default="", validation_alias="SMTP_FROM")
 
+    # Twilio / WhatsApp
+    twilio_account_sid: str = Field(default="", validation_alias="TWILIO_ACCOUNT_SID")
+    twilio_auth_token: str = Field(default="", validation_alias="TWILIO_AUTH_TOKEN")
+    twilio_whatsapp_from: str = Field(default="whatsapp:+14155238886", validation_alias="TWILIO_WHATSAPP_FROM")
+
+    # Stripe
+    stripe_secret_key: str = Field(default="", validation_alias="STRIPE_SECRET_KEY")
+    stripe_publishable_key: str = Field(default="", validation_alias="STRIPE_PUBLISHABLE_KEY")
+    stripe_webhook_secret: str = Field(default="", validation_alias="STRIPE_WEBHOOK_SECRET")
+
+    # Moyasar (Saudi market)
+    moyasar_api_key: str = Field(default="", validation_alias="MOYASAR_API_KEY")
+    moyasar_publishable_key: str = Field(default="", validation_alias="MOYASAR_PUBLISHABLE_KEY")
+
+    # Master key
+    master_key: str = Field(default="", validation_alias="SVOS_MASTER_KEY")
+
 
 settings = Settings()
