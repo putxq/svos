@@ -121,12 +121,8 @@ monitor = PerformanceMonitor()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://192.168.100.24:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -143,7 +139,7 @@ async def api_key_middleware(request: Request, call_next):
     start = _time.time()
     customer_id = ""
 
-    if path in PUBLIC_EXACT or any(path.startswith(p) for p in PUBLIC_PREFIXES):
+    if request.method == "OPTIONS" or path in PUBLIC_EXACT or any(path.startswith(p) for p in PUBLIC_PREFIXES):
         response = await call_next(request)
         return response
 
